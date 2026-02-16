@@ -64,7 +64,7 @@ Sample rows:
 
 
 
-![Description](screenshots/Pasted image.png)
+![Description](screenshots/Pasted_image.png)
 
 <!-- or even better – descriptive name -->
 ![PD Score Distribution](screenshots/pd-distribution.png)
