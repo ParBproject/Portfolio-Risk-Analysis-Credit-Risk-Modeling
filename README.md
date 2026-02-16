@@ -32,21 +32,21 @@ Here are the main charts I created (or plan to create very soon). They show the 
 
 ### 1. Distribution of Predicted Default Probabilities
 
-![PD Score Distribution](screenshot/1.png)
+![PD Score Distribution](Screenshot/1.png)
 
 This histogram shows how the predicted probabilities of default are spread across all 1,000 customers.  
 Notice the long tail on the right — that's where most of the real danger lives.
 
 ### 2. Credit Score vs Probability of Default
 
-![Credit Score vs PD](screenshot/2.png)
+![Credit Score vs PD](Screenshot/2.png)
 
 Super clean negative relationship.  
 Once credit score drops below ~650–670, things get ugly fast. Almost no one with 800+ has any meaningful default risk.
 
 ### 3. Stress Test Results – How Bad Could It Get?
 
-![Stress Test Comparison](screenshot/3.png)
+![Stress Test Comparison](Screenshot/3.png)
 
 Four bars:  
 - Normal (base case)  
@@ -58,7 +58,7 @@ The last one goes negative — portfolio would lose money that year.
 
 ### 4. High-Risk Customers – Where the Concentration Is
 
-![High Risk Concentration](screenshot/4.png)
+![High Risk Concentration](Screenshot/4.png)
 
 Just showing the slice of the portfolio with PD > 20%.  
 Half the loans, but way more than half the expected losses.
