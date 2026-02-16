@@ -88,7 +88,7 @@ If you just want to look:
 If you want to rerun stuff (once I upload the notebook):
 
 ```bash
-# someday...
+
 pip install pandas numpy scikit-learn matplotlib seaborn
 jupyter notebook analysis.ipynb
 
@@ -113,7 +113,7 @@ print("\nHigh PD (>20%) count:", len(df[df["PD_Score"] > 0.20]))
 
 
 
-2. Logistic Regression – Probability of Default model
+###2. Logistic Regression – Probability of Default model
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
@@ -141,7 +141,7 @@ print(coef)
 
 
 
-3. Simple combined stress test
+###. Simple combined stress test
 # What if revenue -20% and expenses +10% at the same time?
 df_stress = df.copy()
 
