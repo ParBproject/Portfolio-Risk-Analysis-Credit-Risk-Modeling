@@ -60,9 +60,28 @@ How resilient is the $68M loan portfolio to defaults and adverse scenarios — a
 | PD_Score                | Predicted probability of default (0–1)   | float   |
 
 Sample rows:
+## 📈 Visualizations
+
+<!-- Screenshot area 1 -->
+![PD Distribution](screenshots/Pasted image.png)  
+*Histogram of predicted PD scores with actual defaults overlay*
+
+<!-- Screenshot area 2 -->
+![Credit Score vs PD](screenshots/02_credit_vs_pd_scatter.png)  
+*Very strong negative relationship (correlation ≈ -0.93)*
+
+<!-- Screenshot area 3 -->
+![Stress Test Comparison](screenshots/03_stress_test_results.png)  
+*Base case vs adverse scenarios*
+
+<!-- Screenshot area 4 -->
+![High-Risk Segment](screenshots/04_high_risk_loans.png)  
+*Concentration of loans with PD > 20%*
 
 ```text
 Customer_ID  Credit_Score  Loan_Amount  Operational_Risk_Score  Revenue   Expenses  Net_Income  Default  PD_Score
 CUST_0000           720     105858.9                    29.9   213829   159411     54418.3        0   0.0932
 CUST_0001           669      73338.9                    37.8   370942   232069    138873.0        0   0.2651
 ...
+
+
