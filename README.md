@@ -62,9 +62,10 @@ How resilient is the $68M loan portfolio to defaults and adverse scenarios — a
 Sample rows:
 ## 📈 Visualizations
 
-<!-- Screenshot area 1 -->
-![PD Distribution](Pasted image (2).png) 
-*Histogram of predicted PD scores with actual defaults overlay*
+![Description](screenshots/pasted-image-2.png)
+
+<!-- or even better – descriptive name -->
+![PD Score Distribution](screenshots/pd-distribution.png)
 
 <!-- Screenshot area 2 -->
 ![Credit Score vs PD](screenshots/02_credit_vs_pd_scatter.png)  
