@@ -141,7 +141,7 @@ print(coef)
 
 
 
-###. Simple combined stress test
+###3. Simple combined stress test
 # What if revenue -20% and expenses +10% at the same time?
 df_stress = df.copy()
 
