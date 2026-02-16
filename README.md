@@ -63,8 +63,9 @@ Sample rows:
 ## 📈 Visualizations
 
 
-
-![Description](Screenshot/1.png)
+<!-- Screenshot area 1 -->
+![PD Distribution](screenshots/01_pd_distribution.png)  
+*Histogram of predicted PD scores with actual defaults overlay*
 
 <!-- or even better – descriptive name -->
 ![PD Score Distribution](screenshots/pd-distribution.png)
