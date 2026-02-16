@@ -91,3 +91,67 @@ If you want to rerun stuff (once I upload the notebook):
 # someday...
 pip install pandas numpy scikit-learn matplotlib seaborn
 jupyter notebook analysis.ipynb
+
+
+
+
+
+### 1. Quick data exploration
+
+```python
+import pandas as pd
+
+df = pd.read_csv("portfolio_data.csv")
+
+print("Shape:", df.shape)
+print("\nDefault rate: {:.1f}%".format(df["Default"].mean() * 100))
+print("Average PD:    {:.1f}%".format(df["PD_Score"].mean() * 100))
+print("\nHigh PD (>20%) count:", len(df[df["PD_Score"] > 0.20]))
+
+
+
+
+
+
+2. Logistic Regression – Probability of Default model
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
+
+X = df[["Credit_Score", "Loan_Amount", "Operational_Risk_Score"]]
+y = df["Default"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+model = LogisticRegression(class_weight="balanced", max_iter=1000)
+model.fit(X_train, y_train)
+
+proba = model.predict_proba(X_test)[:, 1]
+print("Test ROC AUC: {:.4f}".format(roc_auc_score(y_test, proba)))
+
+# Quick look at coefficients
+coef = pd.DataFrame({
+    "feature": X.columns,
+    "coef": model.coef_[0]
+}).round(4)
+print(coef)
+
+
+
+
+3. Simple combined stress test
+# What if revenue -20% and expenses +10% at the same time?
+df_stress = df.copy()
+
+df_stress["Net_Income_stress"] = (
+    df["Revenue"] * 0.80 - df["Expenses"] * 1.10
+)
+
+base_net   = df["Net_Income"].sum()
+stress_net = df_stress["Net_Income_stress"].sum()
+
+print(f"Base case net income:     ${base_net:,.0f}")
+print(f"Combined stress net:      ${stress_net:,.0f}")
+print(f"Change:                   ${stress_net - base_net:,.0f}")
