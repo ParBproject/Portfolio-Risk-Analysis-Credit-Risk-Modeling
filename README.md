@@ -67,6 +67,11 @@ Sample rows:
 <!-- or even better – descriptive name -->
 ![PD Score Distribution](screenshots/pd-distribution.png)
 
+![Pasted image 2](screenshots/Pasted%20image%20(2).png)
+
+<!-- or with alt text -->
+![Screenshot showing PD distribution](screenshots/Pasted%20image%20(2).png)
+
 <!-- Screenshot area 2 -->
 ![Credit Score vs PD](screenshots/02_credit_vs_pd_scatter.png)  
 *Very strong negative relationship (correlation ≈ -0.93)*
