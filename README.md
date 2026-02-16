@@ -1,96 +1,93 @@
-# Portfolio Risk Analysis & Credit Risk Modeling
+# Portfolio Risk Analysis – My Take on a Messy $68M Loan Book
 
-**Advanced credit risk assessment and portfolio stress testing using logistic regression, VaR, and scenario analysis**
+Hey 👋
 
-![Project Banner / Dashboard Screenshot](https://via.placeholder.com/1200x400/1e3a8a/ffffff?text=Portfolio+Risk+Analysis+Dashboard)
-<!-- Replace the line above with your actual screenshot: e.g. ![Dashboard](screenshots/dashboard-overview.png) -->
+This is a project where I tried to figure out how risky a fake-but-realistic loan portfolio actually is.  
+Think of it as: "If I were running a small lending business and had 1,000 customers borrowing money from me — how much trouble am I really in?"
 
-## 📖 Project Overview
+I ended up building a pretty classic credit risk setup using logistic regression for probability of default (PD), some basic VaR, stress testing under ugly scenarios, and a bunch of charts that made me go "oh no" more than once.
 
-This repository contains a complete **credit risk and portfolio risk analysis** project for a simulated loan portfolio of **1,000 customers**.
+## What actually lives here
 
-The analysis includes:
+- `portfolio_data.csv` → the main dataset (1,000 customers, credit scores, loan amounts, revenues, expenses, defaults, etc.)
+- `Risk_Assessment_Report.docx` → the "serious" report I wrote pretending I was presenting to a risk committee
+- (hopefully soon) `notebooks/` or `analysis.ipynb` → the actual code where the magic (and the bugs) happened
 
-- Probability of Default (**PD**) modeling using logistic regression
-- Value at Risk (**VaR**) calculation
-- Stress testing under adverse economic scenarios
-- Operational risk scoring integration
-- Expected Loss (**EL**) estimation
-- Actionable business recommendations
+## The short version — what did I find?
 
-The project demonstrates end-to-end risk analytics workflow: data understanding → modeling → stress testing → visualization → reporting.
+- Total loans outstanding: ~$68 million
+- Average predicted default probability: ~30% 😬
+- Half the book (504 loans) has PD > 20% — that's not great
+- If revenue drops 20% **and** expenses go up 10% at the same time → portfolio loses ~$12.6 million in a year
+- Credit score is still king (correlation with PD is like -0.93 — brutal)
+- Operational risk score matters way more when credit is already shaky
 
-**Key business question answered**:  
-How resilient is the $68M loan portfolio to defaults and adverse scenarios — and what mitigation strategies should be implemented?
+In plain English:  
+The good borrowers are fine.  
+The mediocre-and-below borrowers are carrying most of the risk — and there are a **lot** of them.
 
-## 🎯 Key Results
+## Some visuals that tell the story better than words
 
-- **Portfolio size**: $68,121,079.07 (1,000 loans)
-- **Average PD**: **29.8%**
-- **Actual default rate**: **29.8%** (very well calibrated model)
-- **High-risk loans** (PD > 20%): **504** (50.4% of portfolio)
-- **VaR (95%)**: ≈ **$43,147** per customer tail risk
-- **Combined stress scenario** (–20% revenue +10% expenses): **–$12.56M** net income
-- **Strongest PD driver**: Credit Score (correlation –0.93)
+Here are the main charts I created (or plan to create very soon). They show the patterns that jumped out at me while digging through the data.
 
-## 🛠️ Tech Stack
+### 1. Distribution of Predicted Default Probabilities
 
-- **Language**: Python 3.12+
-- **Core libraries**:
-  - pandas · numpy
-  - scikit-learn (logistic regression)
-  - matplotlib · seaborn (visualizations)
-- **Other**: OpenPyXL (report handling), statsmodels
+![PD Score Distribution](screenshots/1.png)
 
-## 📊 Data
+This histogram shows how the predicted probabilities of default are spread across all 1,000 customers.  
+Notice the long tail on the right — that's where most of the real danger lives.
 
-- **File**: [`portfolio_data.csv`](portfolio_data.csv) (1,000 rows × 9 columns)
-- **Columns**:
+### 2. Credit Score vs Probability of Default
 
-| Column                  | Description                              | Type    |
-|-------------------------|------------------------------------------|---------|
-| Customer_ID             | Unique identifier                        | string  |
-| Credit_Score            | FICO-like score (300–850)                | int     |
-| Loan_Amount             | Approved loan amount ($)                 | float   |
-| Operational_Risk_Score  | Operational risk (0–100)                 | float   |
-| Revenue                 | Customer annual revenue ($)              | float   |
-| Expenses                | Customer annual expenses ($)             | float   |
-| Net_Income              | Revenue – Expenses ($)                   | float   |
-| Default                 | Actual default (0 = paid, 1 = default)   | int     |
-| PD_Score                | Predicted probability of default (0–1)   | float   |
+![Credit Score vs PD](screenshots/02_credit_vs_pd_scatter.png)
 
-Sample rows:
-## 📈 Visualizations
+Super clean negative relationship.  
+Once credit score drops below ~650–670, things get ugly fast. Almost no one with 800+ has any meaningful default risk.
 
+### 3. Stress Test Results – How Bad Could It Get?
 
-<!-- Screenshot area 1 -->
-![PD Distribution](screenshots/01_pd_distribution.png)  
-*Histogram of predicted PD scores with actual defaults overlay*
+![Stress Test Comparison](screenshots/03_stress_test_bars.png)
 
-<!-- or even better – descriptive name -->
-![PD Score Distribution](screenshots/pd-distribution.png)
+Four bars:  
+- Normal (base case)  
+- Revenue drops 20%  
+- Expenses rise 10%  
+- Both happen at once (combined nightmare)  
 
-![Pasted image 2](screenshots/Pasted%20image%20(2).png)
+The last one goes negative — portfolio would lose money that year.
 
-<!-- or with alt text -->
-![Screenshot showing PD distribution](screenshots/Pasted%20image%20(2).png)
+### 4. High-Risk Customers – Where the Concentration Is
 
-<!-- Screenshot area 2 -->
-![Credit Score vs PD](screenshots/02_credit_vs_pd_scatter.png)  
-*Very strong negative relationship (correlation ≈ -0.93)*
+![High Risk Concentration](screenshots/04_high_risk_segment.png)
 
-<!-- Screenshot area 3 -->
-![Stress Test Comparison](screenshots/03_stress_test_results.png)  
-*Base case vs adverse scenarios*
+Just showing the slice of the portfolio with PD > 20%.  
+Half the loans, but way more than half the expected losses.
 
-<!-- Screenshot area 4 -->
-![High-Risk Segment](screenshots/04_high_risk_loans.png)  
-*Concentration of loans with PD > 20%*
+### 5. Screenshot from the Final Report (Executive Summary)
 
-```text
-Customer_ID  Credit_Score  Loan_Amount  Operational_Risk_Score  Revenue   Expenses  Net_Income  Default  PD_Score
-CUST_0000           720     105858.9                    29.9   213829   159411     54418.3        0   0.0932
-CUST_0001           669      73338.9                    37.8   370942   232069    138873.0        0   0.2651
-...
+![Risk Report Executive Summary](screenshots/05_report_summary.png)
 
+This is what the first page of the Word doc looks like — gives you the high-level numbers at a glance.
 
+(If any of these images are missing or broken, it's because I'm still uploading/renaming them — ping me in issues!)
+
+## Why I built this
+
+Honestly? I wanted something concrete to show people who ask "so what do you actually do with risk models?"  
+Also I was curious: how bad does a portfolio have to look before stress testing says "run away"?
+
+Turns out — this one is right on the edge of "concerning but fixable" … if someone actually does something about the worst 200–300 loans.
+
+## How to poke around
+
+If you just want to look:
+
+1. Open `portfolio_data.csv` in Excel / Google Sheets / whatever
+2. Skim the report — the executive summary and recommendations are actually readable
+
+If you want to rerun stuff (once I upload the notebook):
+
+```bash
+# someday...
+pip install pandas numpy scikit-learn matplotlib seaborn
+jupyter notebook analysis.ipynb
