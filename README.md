@@ -41,6 +41,25 @@ The original report remains available as **[Risk_Assessment_Report.docx](Risk_As
 
 ## Analytical workflow
 
+### Credit-risk architecture
+
+```mermaid
+flowchart LR
+    A[Borrower Portfolio] --> B[Schema & Quality Validation]
+    B --> C[PD Discrimination]
+    B --> D[PD Calibration]
+    B --> E[Exposure Concentration]
+    B --> F[Expected Loss]
+    F --> G[PD x LGD Stress]
+    B --> H[Profitability Stress]
+    C --> I[Credit Risk Dashboard]
+    D --> I
+    E --> I
+    G --> I
+    H --> I
+```
+
+
 ```text
 Borrower-level portfolio data
         ↓
