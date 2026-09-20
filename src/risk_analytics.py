@@ -29,6 +29,7 @@ class ModelDiagnostics:
     default_rate: float
     average_pd: float
     roc_auc: float
+    gini_coefficient: float
     ks_statistic: float
     brier_score: float
     log_loss: float
@@ -155,6 +156,7 @@ def model_diagnostics(frame: pd.DataFrame) -> ModelDiagnostics:
         default_rate=float(y_true.mean()),
         average_pd=float(pd_score.mean()),
         roc_auc=roc_auc,
+        gini_coefficient=(2.0 * roc_auc - 1.0) if np.isfinite(roc_auc) else float("nan"),
         ks_statistic=ks,
         brier_score=float(brier_score_loss(y_true, pd_score)),
         log_loss=float(log_loss(y_true, clipped, labels=[0, 1])),
@@ -221,6 +223,62 @@ def calibration_table(frame: pd.DataFrame) -> pd.DataFrame:
     table["Calibration_Gap"] = (
         table["Observed_Default_Rate"] - table["Average_PD"]
     )
+    return table
+
+
+def decile_lift_table(
+    frame: pd.DataFrame,
+    *,
+    n_buckets: int = 10,
+) -> pd.DataFrame:
+    """Summarize default capture and lift from highest to lowest predicted risk."""
+    clean = validate_portfolio(frame, require_default=True)
+    if isinstance(n_buckets, bool) or not isinstance(n_buckets, Integral):
+        raise ValueError("n_buckets must be a positive integer")
+    if n_buckets < 1:
+        raise ValueError("n_buckets must be a positive integer")
+
+    bucket_count = min(int(n_buckets), len(clean))
+    risk_rank = clean["PD_Score"].rank(method="first", ascending=False)
+    clean["Risk_Decile"] = (
+        pd.qcut(
+            risk_rank,
+            q=bucket_count,
+            labels=False,
+            duplicates="drop",
+        )
+        .astype(int)
+        + 1
+    )
+
+    table = (
+        clean.groupby("Risk_Decile", observed=True)
+        .agg(
+            Borrowers=("Customer_ID", "size"),
+            Exposure=("Loan_Amount", "sum"),
+            Average_PD=("PD_Score", "mean"),
+            Defaults=("Default", "sum"),
+            Observed_Default_Rate=("Default", "mean"),
+        )
+        .reset_index()
+        .sort_values("Risk_Decile")
+        .reset_index(drop=True)
+    )
+
+    overall_default_rate = float(clean["Default"].mean())
+    total_defaults = int(clean["Default"].sum())
+    table["Lift"] = (
+        table["Observed_Default_Rate"] / overall_default_rate
+        if overall_default_rate > 0
+        else np.nan
+    )
+    table["Cumulative_Defaults"] = table["Defaults"].cumsum()
+    table["Cumulative_Default_Capture"] = (
+        table["Cumulative_Defaults"] / total_defaults
+        if total_defaults > 0
+        else np.nan
+    )
+    table["Cumulative_Borrower_Share"] = table["Borrowers"].cumsum() / len(clean)
     return table
 
 
