@@ -15,7 +15,7 @@ The bundled portfolio is **synthetic** and designed for methodology demonstratio
 | Capability | Evidence |
 |---|---|
 | Credit-risk analytics | PD × LGD × EAD expected loss |
-| Model discrimination | ROC-AUC and KS statistic |
+| Model discrimination | ROC-AUC, Gini, KS, decile lift and default capture |
 | Probability calibration | Brier score, log loss, calibration bands + Wilson intervals |
 | Concentration risk | Largest exposure, top-10 share, HHI, effective borrower count |
 | Stress testing | Independent PD and LGD multipliers with bounded probabilities |
@@ -102,7 +102,12 @@ A high AUC does not guarantee accurate probability levels.
 
 Measures the maximum separation between cumulative default and non-default score distributions across thresholds.
 
+### Risk deciles and lift
+
+Borrowers are ranked from highest to lowest predicted PD and split into approximately equal-count risk buckets. The dashboard reports observed default rate, lift, and cumulative default capture so ranking quality is visible beyond a single AUC number.
+
 ### Brier score
+
 
 ```text
 Brier = mean((PD - Default)^2)
