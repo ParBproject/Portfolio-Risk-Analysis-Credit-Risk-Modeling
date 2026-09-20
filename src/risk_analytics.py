@@ -386,9 +386,9 @@ def profitability_stress(
     stressed_income = float(stressed_borrower_income.sum())
 
     result = {
-        "baseline_net_income": baseline_income,
-        "stressed_net_income": stressed_income,
-        "net_income_change": stressed_income - baseline_income,
+        "baseline_operating_income": baseline_income,
+        "stressed_operating_income": stressed_income,
+        "operating_income_change": stressed_income - baseline_income,
         "loss_making_share": float((stressed_borrower_income < 0).mean()),
     }
     if "Net_Income" in clean.columns:
