@@ -22,7 +22,21 @@ The bundled dataset is synthetic and designed for methodology demonstration.
 
 It must not be described as a live bank, lender, customer, or regulatory portfolio.
 
-The application also accepts an uploaded CSV with the same schema so the analytical workflow can be reused with appropriately governed data.
+The application also accepts appropriately governed uploaded CSVs. Realized `Default` outcomes and reported `Net_Income` are optional for current-portfolio risk analysis; realized defaults are required only for retrospective model-validation metrics.
+
+## PD score provenance and validation interpretation
+
+The repository treats `PD_Score` as a supplied probability estimate.
+
+The codebase does **not** contain a versioned development pipeline establishing how the bundled `PD_Score` values were originally fitted, what training sample was used, or whether the bundled observations are truly out-of-time relative to model development.
+
+Therefore:
+
+- AUC, KS, Brier score, log loss, and calibration results on the bundled data should be described as **sample diagnostics**;
+- they should not be presented as independent out-of-sample validation unless score provenance and sample separation are established externally;
+- a production validation would require a documented development sample, independent validation sample, and preferably out-of-time performance evidence.
+
+This limitation is intentional and explicit so the project does not overstate the strength of the model evidence.
 
 ## Probability-of-default validation
 
@@ -64,7 +78,8 @@ For each band the dashboard compares:
 - exposure;
 - average predicted PD;
 - observed default rate;
-- calibration gap.
+- calibration gap;
+- approximate 95% Wilson confidence interval for the observed default rate.
 
 A model can have strong ROC-AUC and still be poorly calibrated, so discrimination and calibration are shown separately.
 
@@ -107,10 +122,19 @@ Stressed Net Income
 - Expenses × Expense Multiplier
 ```
 
+Baseline and stressed operating income are calculated on the same accounting basis:
+
+```text
+Operating Income = Revenue - Expenses
+```
+
+If a supplied `Net_Income` field does not reconcile to that definition, the dashboard reports the reconciliation gap rather than mixing accounting bases.
+
 It reports:
 
-- total stressed net income;
-- change from baseline net income;
+- baseline operating income;
+- stressed operating income;
+- change from baseline;
 - share of borrowers becoming loss-making under the scenario.
 
 This is a borrower operating-stress proxy, not a complete credit migration model.
@@ -128,26 +152,30 @@ These metrics describe **exposure concentration** only. They do not estimate joi
 
 ## Account review queue
 
-The account-priority heuristic combines:
+Accounts are ranked primarily by expected-loss contribution:
 
 ```text
-PD × sqrt(exposure share)
+Expected Loss Contribution = EAD × PD × LGD
 ```
 
-This surfaces accounts that are both risky and economically material.
+The dashboard also retains the earlier `PD × sqrt(exposure share)` heuristic as a secondary comparison field.
 
-It is a transparent review queue—not an underwriting cutoff, credit decision, or adverse-action model.
+Expected-loss contribution is more directly tied to economic materiality, while neither metric should be interpreted as an underwriting cutoff, credit decision, or adverse-action model.
 
 ## Data-quality controls
 
 The pipeline validates:
 
-- required columns;
-- unique customer IDs;
-- numeric risk fields;
-- binary observed defaults;
+- non-empty portfolio input;
+- required base columns;
+- unique, non-blank customer IDs;
+- numeric fields with no NaN or infinite values;
+- binary observed defaults when supplied;
 - PD values inside [0,1];
-- non-negative exposure.
+- non-negative borrower exposure and positive total exposure;
+- non-negative revenue, expenses, and operational-risk scores.
+
+A current portfolio may omit realized `Default` labels. In that case, model-validation panels are disabled while expected-loss, concentration, stress, segmentation, and account-review analytics remain available.
 
 ## Production requirements not implemented
 
