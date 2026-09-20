@@ -37,7 +37,7 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q app.py src tests
 
-      - name: Run regression suite
+      - name: Run regression and dashboard smoke tests
         run: python -m pytest -q
 
       - name: Verify risk analytics imports
