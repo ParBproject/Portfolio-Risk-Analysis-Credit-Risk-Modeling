@@ -7,6 +7,7 @@ import pytest
 from src.risk_analytics import (
     calibration_table,
     concentration_summary,
+    decile_lift_table,
     expected_loss_summary,
     model_diagnostics,
     profitability_stress,
@@ -34,6 +35,8 @@ def test_portfolio_schema_is_valid(portfolio):
 def test_model_diagnostics_are_bounded(portfolio):
     metrics = model_diagnostics(portfolio)
     assert 0 <= metrics.roc_auc <= 1
+    assert -1 <= metrics.gini_coefficient <= 1
+    assert metrics.gini_coefficient == pytest.approx(2 * metrics.roc_auc - 1)
     assert 0 <= metrics.ks_statistic <= 1
     assert metrics.brier_score >= 0
     assert metrics.log_loss >= 0
@@ -49,6 +52,21 @@ def test_single_class_defaults_keep_calibration_metrics_available(portfolio):
     assert metrics.brier_score >= 0
     assert metrics.log_loss >= 0
     assert not metrics.discrimination_available
+
+
+def test_decile_lift_table_reconciles_population_and_defaults(portfolio):
+    table = decile_lift_table(portfolio, n_buckets=10)
+    assert table["Borrowers"].sum() == len(portfolio)
+    assert table["Defaults"].sum() == portfolio["Default"].sum()
+    assert table["Risk_Decile"].is_monotonic_increasing
+    if portfolio["Default"].sum() > 0:
+        assert table["Cumulative_Default_Capture"].iloc[-1] == pytest.approx(1.0)
+    assert table["Cumulative_Borrower_Share"].iloc[-1] == pytest.approx(1.0)
+
+
+def test_decile_lift_rejects_invalid_bucket_count(portfolio):
+    with pytest.raises(ValueError, match="positive integer"):
+        decile_lift_table(portfolio, n_buckets=0)
 
 
 def test_calibration_table_reconciles_borrower_count(portfolio):
