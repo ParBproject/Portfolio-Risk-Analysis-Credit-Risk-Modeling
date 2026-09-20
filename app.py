@@ -478,16 +478,21 @@ with portfolio_tab:
         st.plotly_chart(segment_fig, use_container_width=True)
 
     with right:
+        segment_display = segments.copy()
+        segment_formats = {
+            "Exposure": "$ {:,.0f}",
+            "Average_PD": "{:.1%}",
+            "Average_Credit_Score": "{:.0f}",
+            "Exposure_Share": "{:.1%}",
+        }
+        if segment_display["Observed_Default_Rate"].notna().any():
+            segment_formats["Observed_Default_Rate"] = "{:.1%}"
+        else:
+            segment_display = segment_display.drop(
+                columns=["Observed_Default_Rate"]
+            )
         st.dataframe(
-            segments.style.format(
-                {
-                    "Exposure": "$ {:,.0f}",
-                    "Average_PD": "{:.1%}",
-                    "Observed_Default_Rate": "{:.1%}",
-                    "Average_Credit_Score": "{:.0f}",
-                    "Exposure_Share": "{:.1%}",
-                }
-            ),
+            segment_display.style.format(segment_formats),
             hide_index=True,
             use_container_width=True,
         )
@@ -538,7 +543,7 @@ with stress_tab:
         delta_color="inverse",
     )
     s3.metric(
-        "Stressed net income",
+        "Stressed operating income",
         "$" + f"{profitability['stressed_net_income']:,.0f}",
         delta="$" + f"{profitability['net_income_change']:,.0f}",
         delta_color="normal",
