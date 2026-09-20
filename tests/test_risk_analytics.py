@@ -185,6 +185,26 @@ def test_zero_total_exposure_is_rejected(portfolio):
         validate_portfolio(invalid)
 
 
+def test_expected_loss_exposure_weighted_pd_matches_formula(portfolio):
+    toy = portfolio.head(2).copy()
+    toy["Customer_ID"] = ["A", "B"]
+    toy["Loan_Amount"] = [100.0, 900.0]
+    toy["PD_Score"] = [0.10, 0.30]
+    result = expected_loss_summary(toy, lgd=0.50)
+    expected_weighted_pd = (100.0 * 0.10 + 900.0 * 0.30) / 1000.0
+    assert result.exposure_weighted_pd == pytest.approx(expected_weighted_pd)
+    assert result.borrower_average_pd == pytest.approx(0.20)
+    assert result.expected_loss_ratio == pytest.approx(expected_weighted_pd * 0.50)
+
+
+def test_segment_expected_loss_reconciles_to_portfolio(portfolio):
+    segments = risk_segments(portfolio, lgd=0.45)
+    summary = expected_loss_summary(portfolio, lgd=0.45)
+    assert segments["Exposure"].sum() == pytest.approx(summary.total_exposure)
+    assert segments["Expected_Loss"].sum() == pytest.approx(summary.expected_loss)
+    assert segments["Expected_Loss_Share"].sum() == pytest.approx(1.0)
+
+
 def test_unlabeled_current_portfolio_supports_risk_analytics(portfolio):
     current = portfolio.drop(columns=["Default", "Net_Income"]).head(20)
     clean = validate_portfolio(current)
