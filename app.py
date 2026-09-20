@@ -12,6 +12,7 @@ from sklearn.metrics import roc_curve
 from src.risk_analytics import (
     calibration_table,
     concentration_summary,
+    decile_lift_table,
     expected_loss_summary,
     model_diagnostics,
     profitability_stress,
@@ -193,6 +194,7 @@ try:
     has_realized_defaults = "Default" in portfolio.columns
     diagnostics = model_diagnostics(portfolio) if has_realized_defaults else None
     calibration = calibration_table(portfolio) if has_realized_defaults else None
+    deciles = decile_lift_table(portfolio) if has_realized_defaults else None
     concentration = concentration_summary(portfolio)
     baseline_el = expected_loss_summary(portfolio, lgd=lgd)
     stressed_el = expected_loss_summary(
@@ -294,7 +296,7 @@ with validation_tab:
             "analytics remain available, but model-validation metrics require labels."
         )
     else:
-        m1, m2, m3, m4, m5 = st.columns(5)
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
         m1.metric(
             "ROC-AUC",
             f"{diagnostics.roc_auc:.3f}"
@@ -302,14 +304,20 @@ with validation_tab:
             else "N/A",
         )
         m2.metric(
+            "Gini",
+            f"{diagnostics.gini_coefficient:.3f}"
+            if diagnostics.discrimination_available
+            else "N/A",
+        )
+        m3.metric(
             "KS statistic",
             f"{diagnostics.ks_statistic:.3f}"
             if diagnostics.discrimination_available
             else "N/A",
         )
-        m3.metric("Brier score", f"{diagnostics.brier_score:.4f}")
-        m4.metric("Log loss", f"{diagnostics.log_loss:.4f}")
-        m5.metric(
+        m4.metric("Brier score", f"{diagnostics.brier_score:.4f}")
+        m5.metric("Log loss", f"{diagnostics.log_loss:.4f}")
+        m6.metric(
             "Observed vs average PD",
             f"{diagnostics.default_rate:.1%}",
             delta=f"{diagnostics.default_rate - diagnostics.average_pd:+.1%}",
@@ -435,6 +443,70 @@ with validation_tab:
             "Observed default-rate error bars use approximate 95% Wilson intervals. "
             "Wide intervals indicate sparse risk bands and should temper conclusions."
         )
+
+        if deciles is not None:
+            st.markdown("#### Risk deciles and default capture")
+            if deciles["Cumulative_Default_Capture"].notna().any():
+                gains = go.Figure()
+                gains.add_trace(
+                    go.Scatter(
+                        x=deciles["Cumulative_Borrower_Share"],
+                        y=deciles["Cumulative_Default_Capture"],
+                        mode="lines+markers",
+                        name="PD ranking",
+                        line={"color": TEAL, "width": 3},
+                    )
+                )
+                gains.add_trace(
+                    go.Scatter(
+                        x=[0, 1],
+                        y=[0, 1],
+                        mode="lines",
+                        name="Random ranking",
+                        line={"color": "#94A3B8", "dash": "dash"},
+                    )
+                )
+                gains.update_layout(
+                    title={"text": "Cumulative Default Capture", "x": 0.02},
+                    height=410,
+                    paper_bgcolor="white",
+                    plot_bgcolor="white",
+                    xaxis={
+                        "title": "Cumulative borrower share",
+                        "tickformat": ".0%",
+                        "gridcolor": GRID,
+                        "range": [0, 1],
+                    },
+                    yaxis={
+                        "title": "Cumulative defaults captured",
+                        "tickformat": ".0%",
+                        "gridcolor": GRID,
+                        "range": [0, 1],
+                    },
+                    legend={"orientation": "h", "y": -0.20},
+                    margin={"l": 55, "r": 25, "t": 65, "b": 80},
+                )
+                st.plotly_chart(gains, use_container_width=True)
+            else:
+                st.info(
+                    "Default capture is unavailable because this labeled sample "
+                    "contains no observed defaults."
+                )
+
+            st.dataframe(
+                deciles.style.format(
+                    {
+                        "Exposure": "$ {:,.0f}",
+                        "Average_PD": "{:.1%}",
+                        "Observed_Default_Rate": "{:.1%}",
+                        "Lift": "{:.2f}",
+                        "Cumulative_Default_Capture": "{:.1%}",
+                        "Cumulative_Borrower_Share": "{:.1%}",
+                    }
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
 
 
 with portfolio_tab:
