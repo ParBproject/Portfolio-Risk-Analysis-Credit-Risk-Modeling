@@ -203,7 +203,7 @@ try:
         pd_multiplier=pd_multiplier,
         lgd_multiplier=lgd_multiplier,
     )
-    segments = risk_segments(portfolio)
+    segments = risk_segments(portfolio, lgd=lgd)
     profitability = profitability_stress(
         portfolio,
         revenue_multiplier=revenue_multiplier,
@@ -554,6 +554,9 @@ with portfolio_tab:
         segment_formats = {
             "Exposure": "$ {:,.0f}",
             "Average_PD": "{:.1%}",
+            "Exposure_Weighted_PD": "{:.1%}",
+            "Expected_Loss": "$ {:,.0f}",
+            "Expected_Loss_Share": "{:.1%}",
             "Average_Credit_Score": "{:.0f}",
             "Exposure_Share": "{:.1%}",
         }
