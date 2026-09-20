@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -9,7 +10,9 @@ from src.risk_analytics import (
     expected_loss_summary,
     model_diagnostics,
     profitability_stress,
+    risk_segments,
     stress_grid,
+    top_risk_accounts,
     validate_portfolio,
 )
 
@@ -34,11 +37,33 @@ def test_model_diagnostics_are_bounded(portfolio):
     assert 0 <= metrics.ks_statistic <= 1
     assert metrics.brier_score >= 0
     assert metrics.log_loss >= 0
+    assert metrics.discrimination_available
+
+
+def test_single_class_defaults_keep_calibration_metrics_available(portfolio):
+    one_class = portfolio.copy()
+    one_class["Default"] = 0
+    metrics = model_diagnostics(one_class)
+    assert np.isnan(metrics.roc_auc)
+    assert np.isnan(metrics.ks_statistic)
+    assert metrics.brier_score >= 0
+    assert metrics.log_loss >= 0
+    assert not metrics.discrimination_available
 
 
 def test_calibration_table_reconciles_borrower_count(portfolio):
     table = calibration_table(portfolio)
     assert table["Borrowers"].sum() == len(portfolio)
+    assert (table["Observed_DR_Lower_95"] >= 0).all()
+    assert (table["Observed_DR_Upper_95"] <= 1).all()
+    assert (
+        table["Observed_DR_Lower_95"]
+        <= table["Observed_Default_Rate"]
+    ).all()
+    assert (
+        table["Observed_DR_Upper_95"]
+        >= table["Observed_Default_Rate"]
+    ).all()
 
 
 def test_concentration_reconciles_exposure(portfolio):
@@ -59,6 +84,11 @@ def test_expected_loss_increases_under_severe_stress(portfolio):
     assert stressed.expected_loss_ratio >= baseline.expected_loss_ratio
 
 
+def test_invalid_baseline_lgd_is_rejected(portfolio):
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        expected_loss_summary(portfolio, lgd=1.20)
+
+
 def test_stress_grid_contains_baseline(portfolio):
     grid = stress_grid(
         portfolio,
@@ -69,11 +99,62 @@ def test_stress_grid_contains_baseline(portfolio):
     assert (grid["Expected Loss"] >= 0).all()
 
 
-def test_profitability_stress_reduces_income(portfolio):
+def test_profitability_stress_uses_consistent_operating_income_basis(portfolio):
+    modified = portfolio.copy()
+    modified["Net_Income"] = modified["Net_Income"] + 1000.0
     result = profitability_stress(
-        portfolio,
+        modified,
         revenue_multiplier=0.80,
         expense_multiplier=1.10,
     )
+    expected_baseline = float((modified["Revenue"] - modified["Expenses"]).sum())
+    assert result["baseline_net_income"] == pytest.approx(expected_baseline)
     assert result["stressed_net_income"] < result["baseline_net_income"]
+    assert result["net_income_reconciliation_gap"] == pytest.approx(
+        float(modified["Net_Income"].sum()) - expected_baseline
+    )
     assert 0 <= result["loss_making_share"] <= 1
+
+
+def test_empty_portfolio_is_rejected():
+    with pytest.raises(ValueError, match="at least one borrower"):
+        validate_portfolio(pd.DataFrame())
+
+
+def test_infinite_numeric_value_is_rejected(portfolio):
+    invalid = portfolio.head(3).copy()
+    invalid.loc[invalid.index[0], "Loan_Amount"] = np.inf
+    with pytest.raises(ValueError, match="finite"):
+        validate_portfolio(invalid)
+
+
+def test_zero_total_exposure_is_rejected(portfolio):
+    invalid = portfolio.head(3).copy()
+    invalid["Loan_Amount"] = 0.0
+    with pytest.raises(ValueError, match="total exposure"):
+        validate_portfolio(invalid)
+
+
+def test_unlabeled_current_portfolio_supports_risk_analytics(portfolio):
+    current = portfolio.drop(columns=["Default", "Net_Income"]).head(20)
+    clean = validate_portfolio(current)
+    expected_loss = expected_loss_summary(clean)
+    segments = risk_segments(clean)
+    accounts = top_risk_accounts(clean, limit=5)
+
+    assert expected_loss.expected_loss > 0
+    assert segments["Observed_Default_Rate"].isna().all()
+    assert "Default" not in accounts.columns
+    assert "Expected_Loss_Contribution" in accounts.columns
+    assert accounts["Expected_Loss_Contribution"].is_monotonic_decreasing
+
+
+def test_model_validation_requires_realized_default_column(portfolio):
+    current = portfolio.drop(columns=["Default"]).head(20)
+    with pytest.raises(ValueError, match="Default is required"):
+        model_diagnostics(current)
+
+
+def test_top_risk_accounts_rejects_non_integer_limit(portfolio):
+    with pytest.raises(ValueError, match="positive integer"):
+        top_risk_accounts(portfolio, limit=2.5)
