@@ -109,7 +109,24 @@ For each bucket the dashboard reports:
 
 The cumulative-default-capture chart compares the PD ranking with a random-ranking diagonal. This is a ranking diagnostic; it should still be interpreted together with calibration and probability-loss metrics.
 
+## Exposure-weighted PD
+
+For portfolio risk, a simple borrower-average PD and an exposure-weighted PD answer different questions.
+
+The dashboard therefore distinguishes:
+
+```text
+Borrower Average PD
+= mean(PD)
+
+Exposure-Weighted PD
+= sum(EAD × PD) / sum(EAD)
+```
+
+Expected-loss ratios are driven by the exposure-weighted quantity, not by treating every borrower as economically equal.
+
 ## Expected loss
+
 
 The project uses the standard expected-loss identity:
 
