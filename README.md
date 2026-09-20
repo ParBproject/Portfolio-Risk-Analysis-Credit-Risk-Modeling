@@ -14,7 +14,7 @@ The bundled portfolio is **synthetic** and designed for methodology demonstratio
 
 | Capability | Evidence |
 |---|---|
-| Credit-risk analytics | PD × LGD × EAD expected loss |
+| Credit-risk analytics | Exposure-weighted PD and PD × LGD × EAD expected loss |
 | Model discrimination | ROC-AUC, Gini, KS, decile lift and default capture |
 | Probability calibration | Brier score, log loss, calibration bands + Wilson intervals |
 | Concentration risk | Largest exposure, top-10 share, HHI, effective borrower count |
@@ -140,7 +140,12 @@ The repository evaluates a supplied `PD_Score`, but it does not contain the orig
 
 Accordingly, the bundled AUC, KS, Brier, log-loss, and calibration results should be described as **sample diagnostics**, not independent out-of-sample validation, unless model provenance is established externally.
 
+### Exposure-weighted portfolio PD
+
+The application reports both borrower-average PD and exposure-weighted PD. Portfolio expected loss is tied to exposure-weighted risk so larger exposures receive proportionate economic weight.
+
 ## Expected loss
+
 
 The portfolio expected-loss engine uses:
 
