@@ -512,7 +512,7 @@ with validation_tab:
 with portfolio_tab:
     st.markdown("### Exposure concentration and risk segments")
 
-    p1, p2, p3, p4 = st.columns(4)
+    p1, p2, p3, p4, p5, p6 = st.columns(6)
     p1.metric(
         "Largest borrower share",
         f"{concentration.largest_exposure_share:.2%}",
@@ -525,6 +525,14 @@ with portfolio_tab:
     p4.metric(
         "Effective borrower count",
         f"{concentration.effective_borrower_count:.1f}",
+    )
+    p5.metric(
+        "Exposure-weighted PD",
+        f"{baseline_el.exposure_weighted_pd:.2%}",
+    )
+    p6.metric(
+        "Expected-loss ratio",
+        f"{baseline_el.expected_loss_ratio:.2%}",
     )
 
     left, right = st.columns([3, 2])
