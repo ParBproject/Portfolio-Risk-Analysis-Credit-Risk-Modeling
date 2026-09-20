@@ -181,31 +181,35 @@ if uploaded is None:
     raw = load_bundled()
     source_label = "Bundled illustrative portfolio"
 else:
-    raw = pd.read_csv(uploaded)
+    try:
+        raw = pd.read_csv(uploaded)
+    except (pd.errors.ParserError, UnicodeDecodeError, ValueError, OSError) as exc:
+        st.error(f"Could not read uploaded CSV: {exc}")
+        st.stop()
     source_label = "Uploaded portfolio"
 
 try:
     portfolio = validate_portfolio(raw)
+    has_realized_defaults = "Default" in portfolio.columns
+    diagnostics = model_diagnostics(portfolio) if has_realized_defaults else None
+    calibration = calibration_table(portfolio) if has_realized_defaults else None
+    concentration = concentration_summary(portfolio)
+    baseline_el = expected_loss_summary(portfolio, lgd=lgd)
+    stressed_el = expected_loss_summary(
+        portfolio,
+        lgd=lgd,
+        pd_multiplier=pd_multiplier,
+        lgd_multiplier=lgd_multiplier,
+    )
+    segments = risk_segments(portfolio)
+    profitability = profitability_stress(
+        portfolio,
+        revenue_multiplier=revenue_multiplier,
+        expense_multiplier=expense_multiplier,
+    )
 except ValueError as exc:
-    st.error(f"Portfolio validation failed: {exc}")
+    st.error(f"Portfolio analytics failed: {exc}")
     st.stop()
-
-diagnostics = model_diagnostics(portfolio)
-concentration = concentration_summary(portfolio)
-baseline_el = expected_loss_summary(portfolio, lgd=lgd)
-stressed_el = expected_loss_summary(
-    portfolio,
-    lgd=lgd,
-    pd_multiplier=pd_multiplier,
-    lgd_multiplier=lgd_multiplier,
-)
-calibration = calibration_table(portfolio)
-segments = risk_segments(portfolio)
-profitability = profitability_stress(
-    portfolio,
-    revenue_multiplier=revenue_multiplier,
-    expense_multiplier=expense_multiplier,
-)
 
 
 st.markdown(
@@ -232,11 +236,24 @@ with c1:
         f"{len(portfolio):,} borrower records",
     )
 with c2:
-    signal_card(
-        "ROC-AUC",
-        f"{diagnostics.roc_auc:.3f}",
-        f"KS {diagnostics.ks_statistic:.3f}",
-    )
+    if diagnostics is None:
+        signal_card(
+            "ROC-AUC",
+            "N/A",
+            "Upload realized Default labels for validation",
+        )
+    elif diagnostics.discrimination_available:
+        signal_card(
+            "ROC-AUC",
+            f"{diagnostics.roc_auc:.3f}",
+            f"KS {diagnostics.ks_statistic:.3f}",
+        )
+    else:
+        signal_card(
+            "ROC-AUC",
+            "N/A",
+            "Only one observed default class in sample",
+        )
 with c3:
     signal_card(
         "Baseline expected loss",
@@ -269,111 +286,155 @@ validation_tab, portfolio_tab, stress_tab, accounts_tab, methodology_tab = st.ta
 
 with validation_tab:
     st.markdown("### PD discrimination and calibration")
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("ROC-AUC", f"{diagnostics.roc_auc:.3f}")
-    m2.metric("KS statistic", f"{diagnostics.ks_statistic:.3f}")
-    m3.metric("Brier score", f"{diagnostics.brier_score:.4f}")
-    m4.metric("Log loss", f"{diagnostics.log_loss:.4f}")
-    m5.metric(
-        "Observed vs average PD",
-        f"{diagnostics.default_rate:.1%}",
-        delta=f"{diagnostics.default_rate - diagnostics.average_pd:+.1%}",
-        delta_color="off",
-    )
 
-    y_true = portfolio["Default"].astype(int).to_numpy()
-    scores = portfolio["PD_Score"].to_numpy()
-    fpr, tpr, _ = roc_curve(y_true, scores)
+    if diagnostics is None or calibration is None:
+        st.info(
+            "This portfolio does not include realized Default outcomes. "
+            "Exposure, expected-loss, stress, segmentation, and account-review "
+            "analytics remain available, but model-validation metrics require labels."
+        )
+    else:
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric(
+            "ROC-AUC",
+            f"{diagnostics.roc_auc:.3f}"
+            if diagnostics.discrimination_available
+            else "N/A",
+        )
+        m2.metric(
+            "KS statistic",
+            f"{diagnostics.ks_statistic:.3f}"
+            if diagnostics.discrimination_available
+            else "N/A",
+        )
+        m3.metric("Brier score", f"{diagnostics.brier_score:.4f}")
+        m4.metric("Log loss", f"{diagnostics.log_loss:.4f}")
+        m5.metric(
+            "Observed vs average PD",
+            f"{diagnostics.default_rate:.1%}",
+            delta=f"{diagnostics.default_rate - diagnostics.average_pd:+.1%}",
+            delta_color="off",
+        )
 
-    left, right = st.columns(2)
-    with left:
-        roc_fig = go.Figure()
-        roc_fig.add_trace(
-            go.Scatter(
-                x=fpr,
-                y=tpr,
-                mode="lines",
-                name="PD model",
-                line={"color": TEAL, "width": 3},
-            )
-        )
-        roc_fig.add_trace(
-            go.Scatter(
-                x=[0, 1],
-                y=[0, 1],
-                mode="lines",
-                name="Random",
-                line={"color": "#94A3B8", "dash": "dash"},
-            )
-        )
-        roc_fig.update_layout(
-            title={"text": "ROC Curve", "x": 0.02},
-            height=430,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis={"title": "False Positive Rate", "gridcolor": GRID},
-            yaxis={"title": "True Positive Rate", "gridcolor": GRID},
-            legend={"orientation": "h", "y": -0.18},
-            margin={"l": 55, "r": 25, "t": 65, "b": 75},
-        )
-        st.plotly_chart(roc_fig, use_container_width=True)
+        left, right = st.columns(2)
+        with left:
+            if diagnostics.discrimination_available:
+                y_true = portfolio["Default"].astype(int).to_numpy()
+                scores = portfolio["PD_Score"].to_numpy()
+                fpr, tpr, _ = roc_curve(y_true, scores)
+                roc_fig = go.Figure()
+                roc_fig.add_trace(
+                    go.Scatter(
+                        x=fpr,
+                        y=tpr,
+                        mode="lines",
+                        name="PD model",
+                        line={"color": TEAL, "width": 3},
+                    )
+                )
+                roc_fig.add_trace(
+                    go.Scatter(
+                        x=[0, 1],
+                        y=[0, 1],
+                        mode="lines",
+                        name="Random",
+                        line={"color": "#94A3B8", "dash": "dash"},
+                    )
+                )
+                roc_fig.update_layout(
+                    title={"text": "ROC Curve", "x": 0.02},
+                    height=430,
+                    paper_bgcolor="white",
+                    plot_bgcolor="white",
+                    xaxis={"title": "False Positive Rate", "gridcolor": GRID},
+                    yaxis={"title": "True Positive Rate", "gridcolor": GRID},
+                    legend={"orientation": "h", "y": -0.18},
+                    margin={"l": 55, "r": 25, "t": 65, "b": 75},
+                )
+                st.plotly_chart(roc_fig, use_container_width=True)
+            else:
+                st.warning(
+                    "ROC-AUC and KS are undefined because the current sample "
+                    "contains only one observed Default class."
+                )
 
-    with right:
-        calibration_fig = go.Figure()
-        calibration_fig.add_trace(
-            go.Scatter(
-                x=calibration["Average_PD"],
-                y=calibration["Observed_Default_Rate"],
-                mode="lines+markers",
-                name="Observed",
-                line={"color": TEAL, "width": 3},
-                marker={"size": 9},
+        with right:
+            lower_error = (
+                calibration["Observed_Default_Rate"]
+                - calibration["Observed_DR_Lower_95"]
             )
-        )
-        calibration_fig.add_trace(
-            go.Scatter(
-                x=[0, 1],
-                y=[0, 1],
-                mode="lines",
-                name="Perfect calibration",
-                line={"color": "#94A3B8", "dash": "dash"},
+            upper_error = (
+                calibration["Observed_DR_Upper_95"]
+                - calibration["Observed_Default_Rate"]
             )
-        )
-        calibration_fig.update_layout(
-            title={"text": "PD Calibration by Risk Band", "x": 0.02},
-            height=430,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            xaxis={
-                "title": "Average predicted PD",
-                "tickformat": ".0%",
-                "gridcolor": GRID,
-                "range": [0, 1],
-            },
-            yaxis={
-                "title": "Observed default rate",
-                "tickformat": ".0%",
-                "gridcolor": GRID,
-                "range": [0, 1],
-            },
-            legend={"orientation": "h", "y": -0.18},
-            margin={"l": 55, "r": 25, "t": 65, "b": 75},
-        )
-        st.plotly_chart(calibration_fig, use_container_width=True)
+            calibration_fig = go.Figure()
+            calibration_fig.add_trace(
+                go.Scatter(
+                    x=calibration["Average_PD"],
+                    y=calibration["Observed_Default_Rate"],
+                    mode="lines+markers",
+                    name="Observed",
+                    line={"color": TEAL, "width": 3},
+                    marker={"size": 9},
+                    error_y={
+                        "type": "data",
+                        "array": upper_error,
+                        "arrayminus": lower_error,
+                        "visible": True,
+                        "color": "#64748B",
+                    },
+                )
+            )
+            calibration_fig.add_trace(
+                go.Scatter(
+                    x=[0, 1],
+                    y=[0, 1],
+                    mode="lines",
+                    name="Perfect calibration",
+                    line={"color": "#94A3B8", "dash": "dash"},
+                )
+            )
+            calibration_fig.update_layout(
+                title={"text": "PD Calibration by Risk Band", "x": 0.02},
+                height=430,
+                paper_bgcolor="white",
+                plot_bgcolor="white",
+                xaxis={
+                    "title": "Average predicted PD",
+                    "tickformat": ".0%",
+                    "gridcolor": GRID,
+                    "range": [0, 1],
+                },
+                yaxis={
+                    "title": "Observed default rate",
+                    "tickformat": ".0%",
+                    "gridcolor": GRID,
+                    "range": [0, 1],
+                },
+                legend={"orientation": "h", "y": -0.18},
+                margin={"l": 55, "r": 25, "t": 65, "b": 75},
+            )
+            st.plotly_chart(calibration_fig, use_container_width=True)
 
-    st.markdown("#### Calibration table")
-    st.dataframe(
-        calibration.style.format(
-            {
-                "Exposure": "$ {:,.0f}",
-                "Average_PD": "{:.1%}",
-                "Observed_Default_Rate": "{:.1%}",
-                "Calibration_Gap": "{:+.1%}",
-            }
-        ),
-        hide_index=True,
-        use_container_width=True,
-    )
+        st.markdown("#### Calibration table")
+        st.dataframe(
+            calibration.style.format(
+                {
+                    "Exposure": "$ {:,.0f}",
+                    "Average_PD": "{:.1%}",
+                    "Observed_Default_Rate": "{:.1%}",
+                    "Observed_DR_Lower_95": "{:.1%}",
+                    "Observed_DR_Upper_95": "{:.1%}",
+                    "Calibration_Gap": "{:+.1%}",
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.caption(
+            "Observed default-rate error bars use approximate 95% Wilson intervals. "
+            "Wide intervals indicate sparse risk bands and should temper conclusions."
+        )
 
 
 with portfolio_tab:
@@ -528,17 +589,27 @@ with stress_tab:
         "Stress multipliers are deterministic sensitivity assumptions. "
         "They do not estimate the probability that a macroeconomic scenario will occur."
     )
+    if "net_income_reconciliation_gap" in profitability:
+        gap = profitability["net_income_reconciliation_gap"]
+        if abs(gap) > 1e-6:
+            st.caption(
+                "Reported Net_Income does not exactly reconcile to Revenue − Expenses. "
+                "Stress deltas therefore use a consistent operating-income basis; "
+                "reported-vs-calculated reconciliation gap: $" + f"{gap:,.0f}."
+            )
 
 
 with accounts_tab:
     st.markdown("### Prioritized account review")
-    accounts = top_risk_accounts(portfolio, limit=top_n)
+    accounts = top_risk_accounts(portfolio, limit=top_n, lgd=lgd)
     st.dataframe(
         accounts.style.format(
             {
                 "Loan_Amount": "$ {:,.0f}",
                 "Operational_Risk_Score": "{:.1f}",
                 "PD_Score": "{:.1%}",
+                "Expected_Loss_Contribution": "$ {:,.0f}",
+                "Portfolio_EL_Share": "{:.2%}",
                 "Risk_Priority_Score": "{:.5f}",
             }
         ),
@@ -546,8 +617,9 @@ with accounts_tab:
         use_container_width=True,
     )
     st.caption(
-        "Priority score combines predicted default risk and exposure size. "
-        "It is a transparent review heuristic—not a lending decision rule."
+        "Accounts are ranked by expected-loss contribution (EAD × PD × LGD). "
+        "The legacy PD/exposure heuristic remains visible for comparison. "
+        "Neither metric is a lending decision rule."
     )
 
 
