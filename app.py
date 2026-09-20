@@ -616,8 +616,8 @@ with stress_tab:
     )
     s3.metric(
         "Stressed operating income",
-        "$" + f"{profitability['stressed_net_income']:,.0f}",
-        delta="$" + f"{profitability['net_income_change']:,.0f}",
+        "$" + f"{profitability['stressed_operating_income']:,.0f}",
+        delta="$" + f"{profitability['operating_income_change']:,.0f}",
         delta_color="normal",
     )
     s4.metric(
