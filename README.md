@@ -16,13 +16,13 @@ The bundled portfolio is **synthetic** and designed for methodology demonstratio
 |---|---|
 | Credit-risk analytics | PD × LGD × EAD expected loss |
 | Model discrimination | ROC-AUC and KS statistic |
-| Probability calibration | Brier score, log loss, calibration bands |
+| Probability calibration | Brier score, log loss, calibration bands + Wilson intervals |
 | Concentration risk | Largest exposure, top-10 share, HHI, effective borrower count |
 | Stress testing | Independent PD and LGD multipliers with bounded probabilities |
 | Business stress | Revenue/expense shocks and loss-making borrower share |
 | Portfolio segmentation | Transparent PD risk bands and exposure shares |
-| Review prioritization | PD/exposure-based account review queue |
-| Data quality | Schema, ID, numeric, binary-label, PD-range and exposure checks |
+| Review prioritization | Expected-loss contribution + PD/exposure comparison score |
+| Data quality | Empty-input, finite numeric, ID, optional-label, PD-range and exposure checks |
 | Reporting | Professional Streamlit model-monitoring dashboard |
 | Governance | Dedicated validation note with production limitations |
 | Engineering | Modular Python, tests, CI on Python 3.10/3.12 |
@@ -124,9 +124,16 @@ The dashboard reports:
 - exposure;
 - average predicted PD;
 - observed default rate;
-- calibration gap.
+- calibration gap;
+- approximate 95% Wilson interval for observed default rate.
 
 See **[MODEL_VALIDATION.md](MODEL_VALIDATION.md)** for model-governance context and production limitations.
+
+### Important validation provenance note
+
+The repository evaluates a supplied `PD_Score`, but it does not contain the original versioned PD-model development pipeline establishing the training sample or whether the bundled records are truly out-of-time.
+
+Accordingly, the bundled AUC, KS, Brier, log-loss, and calibration results should be described as **sample diagnostics**, not independent out-of-sample validation, unless model provenance is established externally.
 
 ## Expected loss
 
@@ -178,10 +185,12 @@ Stressed Net Income
 - Expenses × Expense Multiplier
 ```
 
+Baseline and stressed operating income use the same `Revenue - Expenses` definition. If an uploaded `Net_Income` field differs, the dashboard reports the reconciliation gap.
+
 Outputs include:
 
-- baseline total net income;
-- stressed total net income;
+- baseline operating income;
+- stressed operating income;
 - income change;
 - share of borrowers becoming loss-making.
 
@@ -219,15 +228,15 @@ Metric definitions, assumptions, limitations and governance boundaries.
 
 ## Account prioritization
 
-The review queue combines probability of default with economic materiality:
+The review queue is ranked by expected-loss contribution:
 
 ```text
-Priority Score = PD × sqrt(Exposure Share)
+Expected Loss Contribution = EAD × PD × LGD
 ```
 
-This is a transparent triage mechanism.
+The earlier `PD × sqrt(Exposure Share)` score remains visible as a secondary comparison field.
 
-It is **not** an underwriting rule, credit cutoff, adverse-action model, or lending decision.
+This is a transparent triage mechanism. It is **not** an underwriting rule, credit cutoff, adverse-action model, or lending decision.
 
 ## Original visual evidence
 
@@ -272,13 +281,16 @@ Portfolio-Risk-Analysis-Credit-Risk-Modeling/
 
 The automated test suite verifies:
 
-- portfolio schema and PD ranges;
-- bounded discrimination metrics;
-- calibration-band borrower reconciliation;
+- portfolio schema, finite values, PD ranges, and positive total exposure;
+- one-class outcome samples do not crash probability monitoring;
+- calibration-band borrower reconciliation and confidence bounds;
 - exposure concentration reconciliation;
 - stressed expected loss does not decrease under more severe PD/LGD assumptions;
-- stress-grid construction;
-- profitability stress reduces income under adverse assumptions.
+- invalid baseline LGD is rejected;
+- profitability stress uses a consistent operating-income basis;
+- unlabeled current portfolios retain risk/stress/account-review analytics;
+- account limits are type-checked;
+- the Streamlit dashboard starts without a runtime exception.
 
 GitHub Actions runs linting, source compilation, tests and import checks on Python **3.10 and 3.12**.
 
