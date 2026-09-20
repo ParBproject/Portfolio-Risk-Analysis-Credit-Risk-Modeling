@@ -91,6 +91,38 @@ def test_concentration_reconciles_exposure(portfolio):
     assert summary.top_10_exposure_share >= summary.largest_exposure_share
 
 
+def test_expected_loss_matches_hand_calculation(portfolio):
+    toy = portfolio.head(2).copy()
+    toy["Customer_ID"] = ["A", "B"]
+    toy["Loan_Amount"] = [100.0, 200.0]
+    toy["PD_Score"] = [0.10, 0.20]
+    result = expected_loss_summary(toy, lgd=0.50)
+    assert result.total_exposure == pytest.approx(300.0)
+    assert result.expected_loss == pytest.approx(25.0)
+    assert result.expected_loss_ratio == pytest.approx(25.0 / 300.0)
+
+
+def test_concentration_matches_hand_calculation(portfolio):
+    toy = portfolio.head(2).copy()
+    toy["Customer_ID"] = ["A", "B"]
+    toy["Loan_Amount"] = [25.0, 75.0]
+    result = concentration_summary(toy)
+    expected_hhi = 0.25**2 + 0.75**2
+    assert result.largest_exposure_share == pytest.approx(0.75)
+    assert result.top_10_exposure_share == pytest.approx(1.0)
+    assert result.hhi == pytest.approx(expected_hhi)
+    assert result.effective_borrower_count == pytest.approx(1 / expected_hhi)
+
+
+def test_account_expected_loss_contributions_reconcile(portfolio):
+    accounts = top_risk_accounts(portfolio, limit=len(portfolio), lgd=0.45)
+    summary = expected_loss_summary(portfolio, lgd=0.45)
+    assert accounts["Expected_Loss_Contribution"].sum() == pytest.approx(
+        summary.expected_loss
+    )
+    assert accounts["Portfolio_EL_Share"].sum() == pytest.approx(1.0)
+
+
 def test_expected_loss_increases_under_severe_stress(portfolio):
     baseline = expected_loss_summary(portfolio)
     stressed = expected_loss_summary(
