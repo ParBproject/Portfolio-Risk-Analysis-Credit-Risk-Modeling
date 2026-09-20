@@ -46,6 +46,16 @@ ROC-AUC measures whether higher PD scores tend to rank defaults above non-defaul
 
 It is a **discrimination** metric and does not prove that the probabilities are calibrated.
 
+### Gini coefficient
+
+The Gini coefficient is derived directly from ROC-AUC:
+
+```text
+Gini = 2 × ROC-AUC - 1
+```
+
+It provides a familiar rank-ordering summary for credit-risk review.
+
 ### KS statistic
 
 The Kolmogorov–Smirnov statistic is calculated as the maximum difference between the true-positive and false-positive rates across score thresholds.
@@ -82,6 +92,22 @@ For each band the dashboard compares:
 - approximate 95% Wilson confidence interval for the observed default rate.
 
 A model can have strong ROC-AUC and still be poorly calibrated, so discrimination and calibration are shown separately.
+
+## Risk deciles, lift, and default capture
+
+Borrowers are ranked from highest to lowest predicted PD and divided into approximately equal-count risk buckets.
+
+For each bucket the dashboard reports:
+
+- borrower count;
+- exposure;
+- average predicted PD;
+- observed default rate;
+- lift relative to the portfolio default rate;
+- cumulative borrower share;
+- cumulative share of observed defaults captured.
+
+The cumulative-default-capture chart compares the PD ranking with a random-ranking diagonal. This is a ranking diagnostic; it should still be interpreted together with calibration and probability-loss metrics.
 
 ## Expected loss
 
