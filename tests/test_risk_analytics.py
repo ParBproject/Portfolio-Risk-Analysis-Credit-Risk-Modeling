@@ -126,8 +126,8 @@ def test_profitability_stress_uses_consistent_operating_income_basis(portfolio):
         expense_multiplier=1.10,
     )
     expected_baseline = float((modified["Revenue"] - modified["Expenses"]).sum())
-    assert result["baseline_net_income"] == pytest.approx(expected_baseline)
-    assert result["stressed_net_income"] < result["baseline_net_income"]
+    assert result["baseline_operating_income"] == pytest.approx(expected_baseline)
+    assert result["stressed_operating_income"] < result["baseline_operating_income"]
     assert result["net_income_reconciliation_gap"] == pytest.approx(
         float(modified["Net_Income"].sum()) - expected_baseline
     )
