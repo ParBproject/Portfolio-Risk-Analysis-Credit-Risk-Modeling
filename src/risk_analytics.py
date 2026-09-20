@@ -58,7 +58,8 @@ class ExpectedLossSummary:
     total_exposure: float
     expected_loss: float
     expected_loss_ratio: float
-    average_pd: float
+    borrower_average_pd: float
+    exposure_weighted_pd: float
     lgd: float
 
 
@@ -323,11 +324,13 @@ def expected_loss_summary(
     total_exposure = float(exposure.sum())
     expected_loss = float(np.sum(exposure * stressed_pd * stressed_lgd))
 
+    exposure_weighted_pd = float(np.sum(exposure * stressed_pd) / total_exposure)
     return ExpectedLossSummary(
         total_exposure=total_exposure,
         expected_loss=expected_loss,
         expected_loss_ratio=expected_loss / total_exposure,
-        average_pd=float(np.mean(stressed_pd)),
+        borrower_average_pd=float(np.mean(stressed_pd)),
+        exposure_weighted_pd=exposure_weighted_pd,
         lgd=stressed_lgd,
     )
 
@@ -355,7 +358,8 @@ def stress_grid(
                     "LGD Multiplier": lgd_multiplier,
                     "Expected Loss": result.expected_loss,
                     "Expected Loss Ratio": result.expected_loss_ratio,
-                    "Stressed Average PD": result.average_pd,
+                    "Stressed Borrower Average PD": result.borrower_average_pd,
+                    "Stressed Exposure-Weighted PD": result.exposure_weighted_pd,
                     "Stressed LGD": result.lgd,
                 }
             )
@@ -398,9 +402,16 @@ def profitability_stress(
     return result
 
 
-def risk_segments(frame: pd.DataFrame) -> pd.DataFrame:
-    """Create transparent PD-based portfolio segments for monitoring."""
+def risk_segments(
+    frame: pd.DataFrame,
+    *,
+    lgd: float = 0.45,
+) -> pd.DataFrame:
+    """Create PD-based segments with exposure-weighted risk and expected loss."""
     clean = validate_portfolio(frame)
+    if not np.isfinite(lgd) or not 0.0 <= lgd <= 1.0:
+        raise ValueError("lgd must be finite and between 0 and 1")
+
     bins = [-1e-12, 0.10, 0.20, 0.40, 0.60, 1.0]
     labels = ["Low", "Moderate", "Elevated", "High", "Severe"]
     segments = pd.cut(
@@ -409,11 +420,15 @@ def risk_segments(frame: pd.DataFrame) -> pd.DataFrame:
         labels=labels,
         include_lowest=True,
     )
+    clean["EAD_x_PD"] = clean["Loan_Amount"] * clean["PD_Score"]
+    clean["Expected_Loss"] = clean["EAD_x_PD"] * lgd
 
     aggregations = {
         "Borrowers": ("Customer_ID", "size"),
         "Exposure": ("Loan_Amount", "sum"),
         "Average_PD": ("PD_Score", "mean"),
+        "EAD_x_PD": ("EAD_x_PD", "sum"),
+        "Expected_Loss": ("Expected_Loss", "sum"),
         "Average_Credit_Score": ("Credit_Score", "mean"),
     }
     if "Default" in clean.columns:
@@ -426,6 +441,14 @@ def risk_segments(frame: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
     result["Exposure_Share"] = result["Exposure"] / result["Exposure"].sum()
+    result["Exposure_Weighted_PD"] = result["EAD_x_PD"] / result["Exposure"]
+    total_expected_loss = float(result["Expected_Loss"].sum())
+    result["Expected_Loss_Share"] = (
+        result["Expected_Loss"] / total_expected_loss
+        if total_expected_loss > 0
+        else 0.0
+    )
+    result = result.drop(columns=["EAD_x_PD"])
     if "Observed_Default_Rate" not in result.columns:
         result["Observed_Default_Rate"] = np.nan
     return result
