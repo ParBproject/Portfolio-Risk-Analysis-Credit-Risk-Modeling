@@ -1,5 +1,13 @@
 # Portfolio Risk Analysis & Credit-Risk Modeling
 
+## For a data analyst application
+
+**Use this as the written credit memo, next to Advanced Financial Models.** The deliverable a hiring manager can read is the risk note and these charts: where default risk sits, how it moves with credit score, and what a stress case does to the book. There is no model script in this repo — say that.
+
+<p align="center"><img src="Screenshot/1.png" alt="Default probability distribution" width="100%"></p>
+<p align="center"><img src="Screenshot/2.png" alt="Credit score versus default probability" width="100%"></p>
+<p align="center"><img src="Screenshot/3.png" alt="Stress test comparison" width="100%"></p>
+
 [![Analysis](https://img.shields.io/badge/Focus-Credit_Risk-7b2cbf)](Risk_Assessment_Report.docx)
 [![Dataset](https://img.shields.io/badge/Dataset-1%2C000_Loans-1f6feb)](portfolio_data.csv)
 [![Report](https://img.shields.io/badge/Deliverable-Risk_Assessment_Report-2ea44f)](Risk_Assessment_Report.docx)
