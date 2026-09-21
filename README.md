@@ -1,76 +1,33 @@
 # Portfolio Risk Analysis & Credit-Risk Modeling
 
-## For a data analyst application
+This repository is the source loan file for the credit case. The expected-loss and concentration analysis lives in [ParBproject/Advanced-Financial-Models](https://github.com/ParBproject/Advanced-Financial-Models). That dashboard defaults to this book.
 
-**Use this as the written credit memo, next to Advanced Financial Models.** The deliverable a hiring manager can read is the risk note and these charts: where default risk sits, how it moves with credit score, and what a stress case does to the book. There is no model script in this repo — say that.
+## Source data
 
-<p align="center"><img src="Screenshot/1.png" alt="Default probability distribution" width="100%"></p>
-<p align="center"><img src="Screenshot/2.png" alt="Credit score versus default probability" width="100%"></p>
-<p align="center"><img src="Screenshot/3.png" alt="Stress test comparison" width="100%"></p>
+[portfolio_data.csv](portfolio_data.csv) is the data. Recomputed from the file:
 
-[![Analysis](https://img.shields.io/badge/Focus-Credit_Risk-7b2cbf)](Risk_Assessment_Report.docx)
-[![Dataset](https://img.shields.io/badge/Dataset-1%2C000_Loans-1f6feb)](portfolio_data.csv)
-[![Report](https://img.shields.io/badge/Deliverable-Risk_Assessment_Report-2ea44f)](Risk_Assessment_Report.docx)
-
-A credit-risk case study examining an illustrative $68M loan portfolio. The project translates borrower-level data into portfolio risk indicators, stress-test results, and management recommendations.
-
-## Executive Snapshot
-
-| Indicator | Result |
+| Check | Value |
 |---|---:|
-| Portfolio size | 1,000 loans |
-| Total outstanding exposure | Approximately $68M |
-| Average predicted probability of default | Approximately 30% |
-| Loans with predicted default probability above 20% | 504 |
-| Combined stress scenario | Approximately $12.6M annual loss |
+| Loans | 1,000 |
+| Total exposure (`Loan_Amount`) | $68,121,079.07 |
+| Average reported `PD_Score` | 29.80% |
+| Loans with `PD_Score` above 20% | 504 |
+| Combined stress net income (revenue × 0.8 − expenses × 1.1) | −$12,559,240.00 |
 
-## Analytical Scope
+There is no model script in this repository. Do not treat the charts below as the calculation.
 
-- Borrower and portfolio-level data quality review
-- Probability-of-default analysis
-- Credit-score and operational-risk relationships
-- High-risk concentration analysis
-- Revenue and expense stress testing
-- Management-focused reporting and recommendations
+## Retired memo
 
-## Key Findings
+[archive/Risk_Assessment_Report.docx](archive/Risk_Assessment_Report.docx) is retired. [DATA_NOTE.md](DATA_NOTE.md) supersedes it. Do not use the Word file as the analysis. Three claims in it are wrong:
 
-- Risk is concentrated among borrowers with weaker credit profiles.
-- Credit score has the strongest observed relationship with predicted default risk in the illustrative dataset.
-- Operational risk becomes more important when borrower credit quality is already weak.
-- A combined 20% revenue decline and 10% expense increase materially changes portfolio profitability.
-- Prioritizing review of the highest-risk accounts offers the clearest risk-reduction opportunity.
+1. It describes a scikit-learn logistic regression. This repository has no Python and no logistic-regression code.
+2. It calls $43,146.55 a 95% VaR and $25,890.70 a 99% VaR. Those figures are the higher 5th and 1st percentiles of per-customer net income. They are positive income levels, not a portfolio loss VaR.
+3. It says operational-risk scores above 60 have a 2.5× default rate. On this file the default rate is 29.67% (27 of 91) above 60 and 29.81% (271 of 909) at or below 60.
 
-## Visual Evidence
+## Charts
 
-### Default-Probability Distribution
+The images in [Screenshot/](Screenshot/) are historical charts from the retired write-up. They are not a substitute for the tested expected-loss and concentration functions in Advanced Financial Models.
 
-![Distribution of predicted default probability](Screenshot/1.png)
+## Data note
 
-### Credit Score vs. Predicted Default Risk
-
-![Credit score versus default probability](Screenshot/2.png)
-
-### Stress-Test Comparison
-
-![Portfolio stress-test comparison](Screenshot/3.png)
-
-### High-Risk Concentration
-
-![High-risk loan concentration](Screenshot/4.png)
-
-## Deliverables
-
-| Artifact | Description |
-|---|---|
-| [Risk_Assessment_Report.docx](Risk_Assessment_Report.docx) | Executive risk report and recommendations |
-| [portfolio_data.csv](portfolio_data.csv) | Illustrative borrower-level portfolio data |
-| [Screenshot/](Screenshot/) | Supporting charts and report visuals |
-
-## Skills Demonstrated
-
-Credit-risk analysis, stress testing, probability of default, portfolio segmentation, data interpretation, executive reporting, and translating analytical findings into business actions.
-
-## Data & Use Note
-
-The portfolio is synthetic and designed for demonstration. Results are illustrative, not investment or lending advice. A production model would require independent validation, bias and stability testing, governance controls, and ongoing performance monitoring.
+The portfolio is synthetic and for demonstration. Results are not lending advice. A production model would need validation, monitoring, and governance that this file does not provide.
