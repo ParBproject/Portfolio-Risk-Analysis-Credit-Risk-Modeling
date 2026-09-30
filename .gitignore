@@ -9,3 +9,12 @@ Thumbs.db
 *.tmp
 *.swp
 ~$*
+
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+
+# Seeded generator output (not the checked-in case-study book)
+synthetic_portfolio.csv

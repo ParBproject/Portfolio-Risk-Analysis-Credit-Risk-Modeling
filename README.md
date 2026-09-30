@@ -1,76 +1,97 @@
 # Portfolio Risk Analysis & Credit-Risk Modeling
 
-## For a data analyst application
+A credit-risk case study on an illustrative book of 1,000 loans (total EAD $68,121,079.07). The numbers below are what `python -m credit_risk` writes to [REPORT.md](REPORT.md) from [portfolio_data.csv](portfolio_data.csv).
 
-**Use this as the written credit memo, next to Advanced Financial Models.** The deliverable a hiring manager can read is the risk note and these charts: where default risk sits, how it moves with credit score, and what a stress case does to the book. There is no model script in this repo — say that.
+<p align="center"><img src="Screenshot/1.png" alt="Distribution of in-sample probability of default" width="100%"></p>
+<p align="center"><img src="Screenshot/2.png" alt="Credit score versus in-sample PD" width="100%"></p>
+<p align="center"><img src="Screenshot/3.png" alt="Borrower earnings stress beside illustrative credit loss" width="100%"></p>
 
-<p align="center"><img src="Screenshot/1.png" alt="Default probability distribution" width="100%"></p>
-<p align="center"><img src="Screenshot/2.png" alt="Credit score versus default probability" width="100%"></p>
-<p align="center"><img src="Screenshot/3.png" alt="Stress test comparison" width="100%"></p>
-
-[![Analysis](https://img.shields.io/badge/Focus-Credit_Risk-7b2cbf)](Risk_Assessment_Report.docx)
+[![Analysis](https://img.shields.io/badge/Focus-Credit_Risk-7b2cbf)](REPORT.md)
 [![Dataset](https://img.shields.io/badge/Dataset-1%2C000_Loans-1f6feb)](portfolio_data.csv)
-[![Report](https://img.shields.io/badge/Deliverable-Risk_Assessment_Report-2ea44f)](Risk_Assessment_Report.docx)
+[![Tests](https://img.shields.io/badge/Tests-pytest-2ea44f)](tests)
 
-A credit-risk case study examining an illustrative $68M loan portfolio. The project translates borrower-level data into portfolio risk indicators, stress-test results, and management recommendations.
+## Definitions
 
-## Executive Snapshot
+- **PD** is an account probability of default. On this file it is `PD_Score`: the in-sample logistic fit on credit score, loan amount, and operational risk. It is not a holdout score. Out-of-fold AUC is 0.852.
+- **EAD** is outstanding loan amount, in dollars.
+- **LGD** is not in the file. Illustrative dollar losses use a constant LGD of 45%. That is an assumption, not an estimate.
+- **Expected loss** is PD × LGD × EAD, summed in dollars.
+- **Credit-loss VaR** is a quantile of simulated portfolio loss (one-factor Gaussian copula, asset correlation 0.15, 20,000 draws, seed 42). The 99% loss quantile is larger than the 95% quantile. Correlation is an assumption, not a Basel weight.
+
+## Executive snapshot
 
 | Indicator | Result |
 |---|---:|
-| Portfolio size | 1,000 loans |
-| Total outstanding exposure | Approximately $68M |
-| Average predicted probability of default | Approximately 30% |
-| Loans with predicted default probability above 20% | 504 |
-| Combined stress scenario | Approximately $12.6M annual loss |
+| Loans | 1,000 |
+| Total EAD | $68,121,079.07 |
+| Unweighted mean PD | 29.80% |
+| EAD-weighted mean PD | 17.23% |
+| PD above 20% | 504 loans: 50.4% of count, 29.72% of EAD |
+| Sum of PD × EAD (before LGD) | $11,734,442.82 |
+| Illustrative expected loss (LGD 45%) | $5,280,499.32 |
+| Illustrative 95% / 99% credit-loss VaR | $9,526,628.91 / $11,936,201.30 |
+| Combined borrower-earnings stress | -$12,559,240.00 of aggregate borrower net income |
 
-## Analytical Scope
+The earnings figure is revenue down 20% and expenses up 10%. It does not change PD or expected loss. It is not an annual loss on the loan book.
 
-- Borrower and portfolio-level data quality review
-- Probability-of-default analysis
-- Credit-score and operational-risk relationships
-- High-risk concentration analysis
-- Revenue and expense stress testing
-- Management-focused reporting and recommendations
+The draft memo called $43,146.55 and $25,890.70 a 95% and 99% VaR. Those are the 5th and 1st percentiles of per-account borrower net income. They are not a portfolio loss VaR.
 
-## Key Findings
+## What the book actually shows
 
-- Risk is concentrated among borrowers with weaker credit profiles.
-- Credit score has the strongest observed relationship with predicted default risk in the illustrative dataset.
-- Operational risk becomes more important when borrower credit quality is already weak.
-- A combined 20% revenue decline and 10% expense increase materially changes portfolio profitability.
-- Prioritizing review of the highest-risk accounts offers the clearest risk-reduction opportunity.
+- Higher-PD loans are smaller, so the 29.80% unweighted PD overstates exposure-weighted default risk (17.23%).
+- Credit score is the variable associated with PD (correlation -0.94). Loan amount moves with credit score (correlation 0.92); the positive loan-amount coefficient in the three-feature logit is a partial effect, and the specification is unchanged.
+- Operational risk above 60 does not mark higher default rates: 27 of 91 loans (29.67%) versus 271 of 909 (29.81%).
+- A 20% revenue decline cuts aggregate borrower net income by 80.07%. A 10% expense increase cuts it by 30.04%. The file has no product-segment column.
 
-## Visual Evidence
+## Charts
 
-### Default-Probability Distribution
+### Default-probability distribution
 
-![Distribution of predicted default probability](Screenshot/1.png)
+![Distribution of in-sample PD](Screenshot/1.png)
 
-### Credit Score vs. Predicted Default Risk
+### Credit score versus PD
 
-![Credit score versus default probability](Screenshot/2.png)
+![Credit score versus in-sample PD](Screenshot/2.png)
 
-### Stress-Test Comparison
+### Earnings stress and credit-loss stress
 
-![Portfolio stress-test comparison](Screenshot/3.png)
+![Borrower net income and illustrative expected loss](Screenshot/3.png)
 
-### High-Risk Concentration
+### Concentration
 
-![High-risk loan concentration](Screenshot/4.png)
+![Count share versus EAD share, and operational-risk default rates](Screenshot/4.png)
+
+## Reproduce
+
+Pinned dependencies are in [requirements.txt](requirements.txt). Tests run in GitHub Actions.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pytest -q
+python -m credit_risk
+```
+
+`python -m credit_risk` rewrites `REPORT.md` and `Screenshot/1.png` through `Screenshot/4.png`.
+
+The checked-in CSV has no recoverable seed. `PD_Score` there is the full-sample fit. A separate generator draws a new book from a fixed scorecard and does not refit PD on the simulated default:
+
+```bash
+python -m credit_risk.generate --seed 42 --output synthetic_portfolio.csv
+```
+
+That file is not the case-study book, and it is gitignored.
 
 ## Deliverables
 
 | Artifact | Description |
 |---|---|
-| [Risk_Assessment_Report.docx](Risk_Assessment_Report.docx) | Executive risk report and recommendations |
-| [portfolio_data.csv](portfolio_data.csv) | Illustrative borrower-level portfolio data |
-| [Screenshot/](Screenshot/) | Supporting charts and report visuals |
+| [REPORT.md](REPORT.md) | Numerical note produced by the code |
+| [Risk_Assessment_Report.docx](Risk_Assessment_Report.docx) | Narrative memo, corrected to the same definitions |
+| [portfolio_data.csv](portfolio_data.csv) | Illustrative 1,000-loan book |
+| [Screenshot/](Screenshot/) | Charts from `python -m credit_risk` |
 
-## Skills Demonstrated
+## Data note
 
-Credit-risk analysis, stress testing, probability of default, portfolio segmentation, data interpretation, executive reporting, and translating analytical findings into business actions.
-
-## Data & Use Note
-
-The portfolio is synthetic and designed for demonstration. Results are illustrative, not investment or lending advice. A production model would require independent validation, bias and stability testing, governance controls, and ongoing performance monitoring.
+The portfolio is synthetic and for demonstration. Results are not lending or investment advice. LGD and asset correlation are assumptions. A production PD would need a real holdout, stability checks, and governance. The recommendations in the memo are judgment; this file does not measure their effect.
