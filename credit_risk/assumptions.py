@@ -9,7 +9,9 @@ expected loss or VaR as a property of the book.
 ASSUMED_LGD = 0.45
 
 # One-factor Gaussian asset correlation used for the illustrative
-# credit-loss distribution. Not a Basel risk weight.
+# credit-loss distribution. Not a Basel risk weight. A Gaussian
+# copula has no tail dependence, and LGD is held at ASSUMED_LGD in
+# every draw, including the tail (no downturn LGD).
 ASSET_CORRELATION = 0.15
 
 # Draws for the simulated loss distribution. The seed makes the
@@ -17,6 +19,11 @@ ASSET_CORRELATION = 0.15
 VAR_SIMULATIONS = 20_000
 VAR_SEED = 42
 VAR_CHUNK = 2_000
+
+# Bootstrap of those draws, used only to put an interval on Monte
+# Carlo error. It does not add economic scenarios.
+VAR_BOOTSTRAP = 1_000
+VAR_BOOTSTRAP_SEED = 42
 
 # Conditional credit stress: systematic factor at this percentile
 # (low factor is the adverse direction in the copula below).
@@ -29,6 +36,7 @@ OP_RISK_FLAG = 60.0
 # published in-sample PD column on the book.
 N_FOLDS = 5
 MODEL_SEED = 42
+KS_BOOTSTRAP = 2_000
 
 # Earnings shocks from the original memo. They move borrower revenue
 # and expenses. They are not a credit-loss scenario.

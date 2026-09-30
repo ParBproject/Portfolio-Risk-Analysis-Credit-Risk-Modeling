@@ -21,6 +21,27 @@ REQUIRED = (
     "EAD",
     "0.15",
     "seed 42",
+    "0.828",
+    "0.877",
+    "0.705",
+    "0.546",
+    "0.505",
+    "0.612",
+    "0.974",
+    "0.339",
+    "20.61%",
+    "0.240",
+    "0.853",
+    "0.8522",
+    "0.8524",
+    "-0.0036",
+    "0.0026",
+    "out-of-time",
+    "no tail dependence",
+    "$9,436,973.61",
+    "$9,622,340.47",
+    "$11,768,211.11",
+    "$12,085,866.62",
 )
 
 FORBIDDEN = (
@@ -78,6 +99,11 @@ def test_docx_matches_the_calculation():
         "27 of 91",
         "not credit loss",
         "not a holdout",
+        "0.828",
+        "0.877",
+        "no tail dependence",
+        "$9,436,973.61",
+        "$12,085,866.62",
     ):
         assert phrase in text, phrase
     for phrase in FORBIDDEN:
