@@ -39,6 +39,10 @@ PD_FEATURES = (
     "Operational_Risk_Score",
 )
 
+# Name fragments that would mark an origination, snapshot, or default
+# date. This file has none, so an out-of-time split is not identified.
+_TIME_TOKENS = ("date", "time", "origination", "vintage", "asof", "as_of")
+
 MONEY_COLUMNS = ("Loan_Amount", "Revenue", "Expenses", "Net_Income")
 
 
@@ -52,6 +56,15 @@ def money_sums(path: Path | None = None) -> dict[str, Decimal]:
             total += Decimal(raw)
         totals[column] = total
     return totals
+
+
+def has_time_column(frame: pd.DataFrame) -> bool:
+    """True when a column name looks like an origination or default date."""
+    for column in frame.columns:
+        name = str(column).lower().replace(" ", "").replace("-", "")
+        if any(token in name for token in _TIME_TOKENS):
+            return True
+    return False
 
 
 def load_portfolio(path: Path | None = None) -> pd.DataFrame:

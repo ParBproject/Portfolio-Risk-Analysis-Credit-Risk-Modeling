@@ -12,11 +12,11 @@ A credit-risk case study on an illustrative book of 1,000 loans (total EAD $68,1
 
 ## Definitions
 
-- **PD** is an account probability of default. On this file it is `PD_Score`: the in-sample logistic fit on credit score, loan amount, and operational risk. It is not a holdout score. Out-of-fold AUC is 0.852.
+- **PD** is an account probability of default. On this file it is `PD_Score`: the in-sample logistic fit on credit score, loan amount, and operational risk. It is not a holdout score. Out-of-fold AUC is 0.852 (DeLong 95% CI 0.828 to 0.877). Gini is 0.705. KS is 0.546 (bootstrap 95% CI 0.505 to 0.612).
 - **EAD** is outstanding loan amount, in dollars.
 - **LGD** is not in the file. Illustrative dollar losses use a constant LGD of 45%. That is an assumption, not an estimate.
 - **Expected loss** is PD × LGD × EAD, summed in dollars.
-- **Credit-loss VaR** is a quantile of simulated portfolio loss (one-factor Gaussian copula, asset correlation 0.15, 20,000 draws, seed 42). The 99% loss quantile is larger than the 95% quantile. Correlation is an assumption, not a Basel weight.
+- **Credit-loss VaR** is a quantile of simulated portfolio loss (one-factor Gaussian copula, asset correlation 0.15, 20,000 draws, seed 42). The 99% loss quantile is larger than the 95% quantile. Correlation is an assumption, not a Basel weight. A bootstrap of those draws (1,000 samples, seed 42) puts a 95% interval on the Monte Carlo error of $9,436,973.61 to $9,622,340.47 around the 95% VaR and $11,768,211.11 to $12,085,866.62 around the 99% VaR. The cents in the table are the seeded point estimate. The copula has no tail dependence, and LGD does not worsen in the tail.
 
 ## Executive snapshot
 
@@ -39,7 +39,10 @@ The draft memo called $43,146.55 and $25,890.70 a 95% and 99% VaR. Those are the
 ## What the book actually shows
 
 - Higher-PD loans are smaller, so the 29.80% unweighted PD overstates exposure-weighted default risk (17.23%).
-- Credit score is the variable associated with PD (correlation -0.94). Loan amount moves with credit score (correlation 0.92); the positive loan-amount coefficient in the three-feature logit is a partial effect, and the specification is unchanged.
+- Credit score is the variable associated with PD (correlation -0.94). Loan amount moves with credit score (correlation 0.92); the positive loan-amount coefficient in the three-feature logit is a partial effect, and the specification is unchanged. A credit-score-only logit has out-of-fold AUC 0.853. The three-feature model does not improve on it (DeLong 95% CI on the difference, -0.0036 to 0.0026, includes zero).
+- Exact probability-scale Shapley values use the average feature vector as the reference, where PD is 20.61%, not the 29.80% average. Mean absolute attributions are 0.240 for credit score, 0.023 for loan amount, and 0.015 for operational risk. The loan-amount attribution follows the positive partial coefficient, not the negative association with default.
+- The file has no origination date, so the five-fold split is not out-of-time. The model is not class-weighted. Out-of-fold calibration slope is 0.974. Brier skill versus the base rate is 0.339.
+- Revenue, expenses, and net income do not raise out-of-fold AUC once features are standardized inside each training fold (0.8522 versus 0.8524). They are not a measured leak on this file. They stay out of the scorecard because they are not application features here.
 - Operational risk above 60 does not mark higher default rates: 27 of 91 loans (29.67%) versus 271 of 909 (29.81%).
 - A 20% revenue decline cuts aggregate borrower net income by 80.07%. A 10% expense increase cuts it by 30.04%. The file has no product-segment column.
 
