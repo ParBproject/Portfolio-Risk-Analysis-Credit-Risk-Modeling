@@ -1,7 +1,7 @@
-"""Quantities the loan file does not identify.
+"""Scenario choices the loan file does not identify.
 
-These are scenario choices, not estimates. Replace them before quoting
-expected loss or VaR as a property of the book.
+Expected loss and credit-loss VaR depend on these. They are not
+estimates from the book.
 """
 
 # Constant loss given default applied to every loan. Not estimated:

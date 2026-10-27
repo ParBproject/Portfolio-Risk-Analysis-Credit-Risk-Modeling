@@ -1,25 +1,12 @@
 """Exact Shapley values for the published three-feature logit.
 
-Two scales are reported, and they are not the same object.
-
-Logit scale
-    For a linear predictor the Shapley value of feature ``j`` is
-    ``beta_j * (x_j - reference_j)``. The values sum to the gap in
-    log-odds from the reference point.
-Probability scale
-    The scorecard output is a sigmoid of that linear predictor. Shapley
-    values of a nonlinear function are the average of the marginal
-    contributions over coalitions. With three features every coalition
-    is enumerated. They sum to account PD minus PD at the reference.
-    They are not the logit contributions passed through a sigmoid.
-
-The reference is the book-average feature vector. Features that are
-left out of a coalition are set to that average. This is an
-interventional explanation: it uses the coefficient and ignores
-correlation among the features. Credit score and loan amount move
-together, so the loan-amount value follows the partial coefficient,
-including its positive sign, rather than the negative raw association
-with default.
+On the logit scale, feature ``j`` contributes ``beta_j`` times its gap
+from the book-average feature vector. On the probability scale the
+sigmoid is not linear, so each value is the average marginal
+contribution over the coalitions of that sigmoid. A feature left out
+of a coalition is set to the average, which ignores the correlation
+between credit score and loan amount. The loan-amount value follows
+the partial coefficient, including its positive sign.
 """
 
 from __future__ import annotations
@@ -62,11 +49,10 @@ def probability_shapley(
     features: np.ndarray,
     baseline: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Exact interventional Shapley values of ``sigmoid(intercept + x @ beta)``.
+    """Exact Shapley values of ``sigmoid(intercept + x @ beta)``.
 
-    Returns ``(phi, predicted_pd, reference_pd)``. ``reference_pd`` is
-    constant across rows. ``p`` above 12 is refused: the coalitions
-    are enumerated, not sampled.
+    Returns ``(phi, predicted_pd, reference_pd)``. More than 12 features
+    is refused, because the coalitions are enumerated.
     """
     coefficients = np.asarray(coefficients, dtype=float)
     features = np.asarray(features, dtype=float)

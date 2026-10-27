@@ -206,12 +206,7 @@ def calibration_intercept_slope(
 
 
 def brier_skill(labels: np.ndarray, scores: np.ndarray) -> float:
-    """Skill versus a constant forecast at the sample default rate.
-
-    Skill is 1 minus model Brier over the base-rate Brier. Zero means
-    the score is no better than quoting the default rate. Class weights
-    are not used: they would move average PD off that rate.
-    """
+    """One minus model Brier over the Brier of a constant at the default rate."""
     labels = np.asarray(labels).astype(int)
     brier = float(brier_score_loss(labels, scores))
     base_rate = float(labels.mean())

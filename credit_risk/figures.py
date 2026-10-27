@@ -117,10 +117,7 @@ def _stress(results: dict, path: Path) -> None:
     axes[1].bar(credit_labels, credit_values, color=[_BLUE, _RUST])
     axes[1].set_title("Illustrative credit loss")
     axes[1].set_ylabel("Expected loss ($ millions)")
-    fig.suptitle(
-        "Earnings stress and credit-loss stress are different quantities",
-        fontsize=13,
-    )
+    fig.suptitle("Borrower net income and illustrative credit loss", fontsize=13)
     _finish(fig, path)
 
 

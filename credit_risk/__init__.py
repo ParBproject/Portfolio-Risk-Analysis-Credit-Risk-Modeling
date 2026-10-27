@@ -1,8 +1,6 @@
-"""Portfolio credit-risk calculations for the checked-in loan book.
+"""Credit-risk figures for the checked-in loan book.
 
-The public figures live in :func:`credit_risk.metrics.analyze`. Dollar
-expected loss needs an LGD, which this file does not contain. See
-``credit_risk.assumptions``.
+Dollar expected loss uses an assumed LGD. See ``credit_risk.assumptions``.
 """
 
 __all__ = ["analyze", "load_portfolio"]
