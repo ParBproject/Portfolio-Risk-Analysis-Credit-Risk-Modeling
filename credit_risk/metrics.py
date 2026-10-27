@@ -1,32 +1,11 @@
-"""PD, LGD, EAD, expected loss, earnings stress, and credit-loss VaR.
+"""Portfolio PD, expected loss, earnings stress, and credit-loss VaR.
 
-Definitions used here
----------------------
-PD
-    Account-level probability of default. On the checked-in book this
-    is the ``PD_Score`` column. That column is the in-sample logistic
-    fit on credit score, loan amount, and operational risk. It is not
-    a holdout prediction.
-LGD
-    Loss given default, as a fraction of EAD. It is not in the file.
-    Dollar figures that need it use :data:`ASSUMED_LGD` and are
-    labeled as illustrative.
-EAD
-    Exposure at default, in dollars. Taken as the outstanding
-    ``Loan_Amount``. There is no undrawn commitment in the file.
-EL
-    Expected loss in dollars: sum of PD x LGD x EAD. The same LGD x EAD
-    amounts, in cents, are the loss given default in the simulation,
-    so the population mean of simulated loss is this EL.
-Credit-loss VaR
-    A quantile of the simulated portfolio loss distribution (a loss
-    amount). The 99% quantile is at least the 95% quantile.
-    This is not the lower tail of borrower net income.
-Expected shortfall
-    The mean of the worst ``(1 - alpha) * n`` simulated losses, which
-    is an integer count here (1,000 of 20,000 at 95%, 200 at 99%).
-    The cent on a quantile is a seeded point estimate. Monte Carlo
-    error is reported beside it.
+``PD_Score`` is the in-sample logistic fit, not a holdout score. LGD
+is not in the file; dollar losses use :data:`ASSUMED_LGD`. EAD is
+outstanding ``Loan_Amount``. Expected loss is the sum of PD x LGD x
+EAD. Credit-loss VaR is a quantile of simulated portfolio loss, so
+the 99% figure is at least the 95% figure. It is not the lower tail
+of borrower net income.
 """
 
 from __future__ import annotations
@@ -107,11 +86,10 @@ def earnings_scenarios(revenue: Decimal, expenses: Decimal) -> dict[str, Decimal
 
 
 def borrower_income_percentiles(net_income: pd.Series) -> dict[str, float]:
-    """Lower tail of per-account borrower net income.
+    """5th and 1st percentiles of per-account borrower net income.
 
-    The draft memo labeled these as 95% and 99% VaR. They are the
-    5th and 1st percentiles (NumPy ``higher`` order statistic) of
-    borrower net income, in dollars per account.
+    The draft memo labeled these as 95% and 99% VaR. They are not a
+    portfolio loss.
     """
     values = net_income.to_numpy(dtype=float)
     return {
@@ -129,13 +107,11 @@ def conditional_pd(
     factor_quantile: float = STRESS_FACTOR_QUANTILE,
     rho: float = ASSET_CORRELATION,
 ) -> np.ndarray:
-    """Gaussian-copula PD conditional on a systematic-factor percentile.
+    """Gaussian-copula PD given a systematic-factor percentile.
 
-    Low factor values are adverse: asset value is
-    ``sqrt(rho) * M + sqrt(1 - rho) * Z``. The factor at its median is
-    not the unconditional PD. The idiosyncratic scale ``sqrt(1 - rho)``
-    remains in the denominator, and the unconditional PD is the average
-    of this function over M, not its value at M = 0.
+    Asset value is ``sqrt(rho) * M + sqrt(1 - rho) * Z``, and a low
+    factor is the adverse side. The value at M = 0 is not the
+    unconditional PD, because ``sqrt(1 - rho)`` stays in the denominator.
     """
     factor = float(norm.ppf(factor_quantile))
     threshold = norm.ppf(_clip_pd(probabilities))
@@ -197,10 +173,8 @@ def _tail_mean(losses: np.ndarray, alpha: float) -> tuple[float, int]:
 def loss_quantiles(losses: np.ndarray) -> dict[str, float]:
     """Loss VaR and expected shortfall. 99% VaR is at least 95% VaR.
 
-    VaR is the linear (type 7) sample quantile. Expected shortfall is
-    the mean of the upper tail of a fixed count, not the mean of every
-    draw that happens to sit above the interpolated quantile. On this
-    book those two sets are the same; the count is the definition.
+    VaR is the linear sample quantile. Expected shortfall is the mean
+    of a fixed upper-tail count.
     """
     losses = np.asarray(losses, dtype=float)
     var_95 = float(np.quantile(losses, 0.95, method="linear"))
@@ -228,11 +202,11 @@ def monte_carlo_intervals(
     n_boot: int = VAR_BOOTSTRAP,
     seed: int = VAR_BOOTSTRAP_SEED,
 ) -> dict[str, float]:
-    """Percentile intervals for the Monte Carlo error of VaR and ES.
+    """Percentile intervals for Monte Carlo error in VaR and ES.
 
-    Each replicate resamples the simulated losses with replacement.
-    The interval is simulation error around this model, not a
-    confidence interval for a different copula or a different LGD.
+    Each replicate resamples the simulated losses. The band is
+    simulation error for this copula and this LGD, not a range over
+    other assumptions.
     """
     losses = np.asarray(losses, dtype=float)
     n = int(losses.shape[0])
@@ -286,13 +260,11 @@ def scorecard_fit(frame: pd.DataFrame) -> dict[str, float]:
 
 
 def out_of_fold_pd(frame: pd.DataFrame) -> dict[str, float]:
-    """Stratified K-fold PD scores. Features exclude the label and PD_Score.
+    """Stratified K-fold scores on the three scorecard features.
 
-    The fold estimator is unpenalized (``C=inf``), matching the
-    published scorecard. There is no class weight: expected loss needs
-    a probability, and balancing the classes would move mean PD off
-    the default rate. There is no origination date on this file, so
-    the split is not out of time.
+    The fold fit is unpenalized, with no class weight, matching the
+    published scorecard. The file has no origination date, so the
+    split is not out of time.
     """
     leaked = [column for column in PD_FEATURES if column in LEAKAGE_COLUMNS]
     if leaked:
