@@ -1,14 +1,8 @@
-# Editors, operating systems, and local agent tooling
+# Editors and operating systems
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-.cursor/
-.cursorrules
-.claude/
-AGENTS.md
-AGENT.md
-CLAUDE.md
 
 # Local and temporary files
 *.log
