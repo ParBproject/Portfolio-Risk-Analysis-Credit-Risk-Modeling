@@ -97,6 +97,8 @@ def delong_difference(
         raise ValueError("score vectors imply different class counts")
     n1 = pos_a.size
     n0 = neg_a.size
+    if n1 < 2 or n0 < 2:
+        raise ValueError("DeLong variance needs at least two loans in each class")
     s10_a = float(np.sum((pos_a - auc_a) ** 2) / (n1 - 1))
     s01_a = float(np.sum((neg_a - auc_a) ** 2) / (n0 - 1))
     s10_b = float(np.sum((pos_b - auc_b) ** 2) / (n1 - 1))
@@ -138,18 +140,28 @@ def _structural_components(
 
 
 def ks_statistic(labels: np.ndarray, scores: np.ndarray) -> float:
-    """Kolmogorov-Smirnov distance between default and non-default scores."""
+    """Kolmogorov-Smirnov distance between default and non-default scores.
+
+    Ties share one CDF step. The gap is measured after every loan at
+    that score, so the result does not depend on row order inside a tie.
+    """
     labels = np.asarray(labels).astype(int)
     scores = np.asarray(scores, dtype=float)
     order = np.argsort(scores, kind="mergesort")
     ordered = labels[order]
+    ordered_scores = scores[order]
     n1 = int(ordered.sum())
     n0 = int(ordered.size - n1)
     if n1 == 0 or n0 == 0:
         raise ValueError("both classes are required")
     cdf_default = np.cumsum(ordered) / n1
     cdf_other = np.cumsum(1 - ordered) / n0
-    return float(np.max(np.abs(cdf_default - cdf_other)))
+    gaps = np.abs(cdf_default - cdf_other)
+    # Last row of each tied score. The CDF there includes the whole tie.
+    at_score = np.ones(ordered.size, dtype=bool)
+    if ordered.size > 1:
+        at_score[:-1] = ordered_scores[:-1] != ordered_scores[1:]
+    return float(np.max(gaps[at_score]))
 
 
 def ks_bootstrap(
