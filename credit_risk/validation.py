@@ -206,13 +206,15 @@ def calibration_intercept_slope(
 ) -> tuple[float, float]:
     """Intercept and slope of default on the logit of the score.
 
-    Slope 1 and intercept 0 is the recalibration target. This is a
-    logistic fit, not a bin chart.
+    Slope 1 and intercept 0 is the recalibration target. The fit is
+    unpenalized. It is not a bin chart.
     """
     labels = np.asarray(labels).astype(int)
     probability = np.clip(np.asarray(scores, dtype=float), 1e-6, 1.0 - 1e-6)
     logit = np.log(probability / (1.0 - probability)).reshape(-1, 1)
-    model = LogisticRegression(solver="lbfgs", max_iter=2000, C=np.inf)
+    model = LogisticRegression(
+        solver="lbfgs", max_iter=2000, C=np.inf, tol=1e-12
+    )
     model.fit(logit, labels)
     return float(model.intercept_[0]), float(model.coef_[0, 0])
 

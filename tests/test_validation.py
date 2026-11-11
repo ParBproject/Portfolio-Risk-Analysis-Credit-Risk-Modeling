@@ -184,8 +184,10 @@ def test_calibration_slope_matches_the_saturated_two_point_fit():
     intercept, slope = calibration_intercept_slope(labels, scores)
     logit_low = np.log(0.25 / 0.75)
     logit_high = np.log(0.75 / 0.25)
-    assert intercept == pytest.approx(logit_low, abs=1e-3)
-    assert slope == pytest.approx(logit_high - logit_low, abs=1e-3)
+    # Default L2 (C=1) lands near slope 0.67. This tolerance only passes
+    # the unpenalized MLE.
+    assert intercept == pytest.approx(logit_low, abs=1e-8)
+    assert slope == pytest.approx(logit_high - logit_low, abs=1e-8)
     # A constant score leaves the slope unidentified, but the probability
     # at that score is still the default rate.
     intercept, slope = calibration_intercept_slope(

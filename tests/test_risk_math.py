@@ -130,10 +130,14 @@ def test_income_percentiles_are_higher_order_statistics():
     assert borrower_income_percentiles(pd.Series([12.5])) == {"p05": 12.5, "p01": 12.5}
 
 
-def test_scorecard_fit_recovers_a_full_rank_logit():
-    credit = np.array([500.0, 600.0, 700.0, 800.0])
-    loan = np.array([10_000.0, 80_000.0, 20_000.0, 50_000.0])
-    operational = np.array([10.0, 70.0, 20.0, 40.0])
+def test_scorecard_fit_recovers_an_overdetermined_logit():
+    # Eight loans, four coefficients. An exact fit is least squares,
+    # not interpolation of a square system.
+    credit = np.array([500.0, 600.0, 700.0, 800.0, 550.0, 650.0, 750.0, 720.0])
+    loan = np.array(
+        [10_000.0, 80_000.0, 20_000.0, 50_000.0, 40_000.0, 15_000.0, 90_000.0, 33_000.0]
+    )
+    operational = np.array([10.0, 70.0, 20.0, 40.0, 55.0, 15.0, 80.0, 25.0])
     intercept, credit_coef, loan_coef, operational_coef = -1.5, 0.002, -1e-5, 0.01
     logit = (
         intercept
@@ -150,6 +154,7 @@ def test_scorecard_fit_recovers_a_full_rank_logit():
         }
     )
     fit = scorecard_fit(frame)
+    assert len(frame) > 4
     assert fit["intercept"] == pytest.approx(intercept)
     assert fit["Credit_Score"] == pytest.approx(credit_coef)
     assert fit["Loan_Amount"] == pytest.approx(loan_coef)
@@ -190,11 +195,34 @@ def test_zero_loss_given_default_produces_zero_portfolio_loss():
     assert losses.tolist() == [0.0, 0.0, 0.0, 0.0]
 
 
-def test_asset_correlation_must_be_in_the_unit_interval():
-    with pytest.raises(ValueError):
-        simulate_portfolio_loss(np.array([0.2]), np.array([1.0]), rho=1.0, n_sims=1)
+def test_perfect_correlation_ignores_the_idiosyncratic_draw(monkeypatch):
+    # rho = 1. Idiosyncratic draws of +5 would keep both loans solvent
+    # at a zero threshold if they had any weight. The factor is -1, so
+    # both assets are -1 and both loans default.
+    class FixedDraws:
+        def standard_normal(self, size):
+            if isinstance(size, tuple):
+                return np.array([[5.0, 5.0]])
+            return np.array([-1.0])
+
+    monkeypatch.setattr(
+        "credit_risk.metrics.np.random.default_rng", lambda _seed: FixedDraws()
+    )
+    losses = simulate_portfolio_loss(
+        np.array([0.5, 0.5]),
+        np.array([10.0, 25.50]),
+        rho=1.0,
+        n_sims=1,
+        seed=0,
+    )
+    assert losses.tolist() == [35.50]
+
+
+def test_asset_correlation_outside_the_unit_interval_is_rejected():
     with pytest.raises(ValueError):
         simulate_portfolio_loss(np.array([0.2]), np.array([1.0]), rho=-0.1, n_sims=1)
+    with pytest.raises(ValueError):
+        simulate_portfolio_loss(np.array([0.2]), np.array([1.0]), rho=1.1, n_sims=1)
 
 
 def test_a_constant_loss_sample_has_no_simulation_width():

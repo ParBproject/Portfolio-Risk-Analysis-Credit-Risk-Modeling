@@ -129,11 +129,12 @@ def simulate_portfolio_loss(
     """One-factor Gaussian copula portfolio loss, in dollars.
 
     Marginal default probabilities are the supplied PDs. Loss given
-    default is deterministic. The draws are reproducible for a fixed
-    NumPy seed and version.
+    default is deterministic. Correlation 1 drops the idiosyncratic
+    term, so every loan shares the factor draw. The draws are
+    reproducible for a fixed NumPy seed and version.
     """
-    if not 0.0 <= rho < 1.0:
-        raise ValueError("asset correlation must be in [0, 1)")
+    if not 0.0 <= rho <= 1.0:
+        raise ValueError("asset correlation must be in [0, 1]")
     threshold = norm.ppf(_clip_pd(probabilities))
     # Cents keep each scenario total exact. A float dot product is not
     # associative, so the quantile could move by a cent across CPUs.
