@@ -44,6 +44,21 @@ def test_conditional_pd_is_the_vasicek_formula_with_the_adverse_tail_low():
     assert unchanged == pytest.approx([0.2, 0.5, 0.8])
     clipped = conditional_pd(np.array([0.0, 1.0]), 0.5, 0.0)
     assert clipped == pytest.approx([1e-12, 1.0 - 1e-12])
+
+
+def test_conditional_pd_at_perfect_correlation_is_a_step():
+    # Threshold for PD 0.5 is 0. The 5% factor is negative and the 95%
+    # factor is positive, so every loan defaults or none do.
+    below = conditional_pd(np.array([0.5, 0.5]), factor_quantile=0.05, rho=1.0)
+    above = conditional_pd(np.array([0.5]), factor_quantile=0.95, rho=1.0)
+    assert below.tolist() == [1.0, 1.0]
+    assert above.tolist() == [0.0]
+    # The simulator defaults only when asset < threshold, so a tie is 0.
+    tied = conditional_pd(np.array([0.5]), factor_quantile=0.5, rho=1.0)
+    assert tied.tolist() == [0.0]
+    # Median factor. Only a loan whose threshold is positive defaults.
+    mixed = conditional_pd(np.array([0.3, 0.8]), factor_quantile=0.5, rho=1.0)
+    assert mixed.tolist() == [0.0, 1.0]
     draws = np.random.default_rng(0).standard_normal(200_000)
     threshold = float(norm.ppf(0.20))
     rho = 0.15
